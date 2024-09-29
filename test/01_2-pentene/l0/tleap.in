@@ -1,0 +1,4 @@
+source leaprc.gaff
+loadAmberParams pentene.frcmod
+mol = loadMol2 pentene.mol2
+saveAmberParm mol mol.prmtop mol.inpcrd
