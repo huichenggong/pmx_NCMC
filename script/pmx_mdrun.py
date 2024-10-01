@@ -348,7 +348,8 @@ if __name__ == "__main__":
             f.write(csv_line)
 
         settings["current_cycle"] += 1
-    logging.info(f"{settings['cycle']} cycle(s) have finished in {(time.time()-t0)/3600:.1f} h")
+    t1 = time.time()-t0
+    logging.info(f"{settings['cycle']} cycle(s) have finished in {int(t1 // 3600)} h {int((t1 % 3600) // 60)} min {int(t1 % 60)} s")
     logging.info(f"Cleaning up ...")
     shutil.rmtree(settings["tmp_folder"])
     logging.info(f"ALL Done")
