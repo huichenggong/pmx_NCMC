@@ -202,9 +202,9 @@ def logging_ave_time_cycle(ave_time_cycle, time_cycle):
     :return:
     """
     if ave_time_cycle > 3600:
-        ave_time_cycle_str = f"{ave_time_cycle // 3600} h {int((ave_time_cycle % 3600) // 60)} min {(ave_time_cycle % 60):.0f} s"
+        ave_time_cycle_str = f"{int(ave_time_cycle // 3600)} h {int((ave_time_cycle % 3600) // 60)} min {(ave_time_cycle % 60):.0f} s"
     elif ave_time_cycle > 60:
-        ave_time_cycle_str = f"{ave_time_cycle // 60} min {(ave_time_cycle % 60):.1f} s"
+        ave_time_cycle_str = f"{int(ave_time_cycle // 60)} min {(ave_time_cycle % 60):.1f} s"
     else:
         ave_time_cycle_str = f"{ave_time_cycle:.2f} s"
     logging.info(f"Time of this cycle : {time_cycle:.2f} s. Average time per cycle: {ave_time_cycle_str}")
