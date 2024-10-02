@@ -257,10 +257,9 @@ if __name__ == "__main__":
     parser.add_argument('--debug',
                         action='store_true', help='Print debug information')
     parser.add_argument('--format', metavar="log_format",
-                        type=str, help='Log format. Default : "%(asctime)s - %(levelname)s - %(message)s" .'
-                                       'If you want a clean output, use "%(message)s". In debug run, this will be ignored.',
+                        type=str, help='Log format. Default : "%%(asctime)s - %%(levelname)s - %%(message)s" .'
+                                       'If you want a clean output, use "%%(message)s". In debug run, this will be ignored.',
                         default='%(asctime)s - %(levelname)s - %(message)s')
-    parser.add_argument('--version', action='version', version=f'%(prog)s {pmxNCMC.__version__}')
 
     args = parser.parse_args()
     settings = {"top"          : Path(args.p),
