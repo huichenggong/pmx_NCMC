@@ -174,7 +174,7 @@ def swap_check(w01, w10, kBT, settings_dict):
     :return: swap_flag, csv_line, s0, s1
     """
     p_accept = np.exp(-(w01 + w10) / kBT)
-    csv_line = f"{settings_dict['current_cycle']:5d},{w01:15.13},{w10:15.13},{min(1, p_accept):16.3f},"
+    csv_line = f"{settings_dict['current_cycle']:5d},{w01:16.12},{w10:16.12},{min(1, p_accept):16.3f},"
     inf_line = f"Cycle {settings_dict['current_cycle']}, {w01:9.3f} kJ/mol, {w10:9.3f} kJ/mol, {min(1, p_accept):6.3f},"
     current_folder = settings_dict["current_folder"]
     tmp_folder = settings_dict["tmp_folder"]
@@ -310,7 +310,7 @@ if __name__ == "__main__":
             if file_name.exists():
                 util.backup_if_exist(file_name)
         with open(settings["csv"], "w") as f:
-            f.writelines(["Cycle,Work_01(kJ/mol),Work_10(kJ/mol),Acceptance_ratio,Accept\n"])
+            f.writelines(["Cycle,Work_01 (kJ/mol),Work_10 (kJ/mol),Acceptance_ratio,Accept\n"])
     elif int(settings["folder_start"].name) < 0:
         logging.info(f"Invalid folder_start {settings['folder_start']}")
         exit(1)
