@@ -1,7 +1,7 @@
 import os
 import shutil
 import logging
-
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy.integrate import simpson
 
@@ -76,3 +76,80 @@ def mdp_check_TI(mdp_file):
     logging.info(f"MDP file {mdp_file} does not have the correct init-lambda, delta-lambda, nsteps")
     logging.info(f"init-lambda={init_lambda}, delta-lambda * nsteps = {delta_lambda * nsteps}")
     return False
+
+# for plotting
+def gauss_func(A, mean, dev, x):
+    """Given the parameters of a Gaussian and a range of the x-values, returns
+    the y-values of the Gaussian function"""
+    x = np.array(x)
+    y = A*np.exp(-(((x-mean)**2.)/(2.0*(dev**2.))))
+    return y
+
+def data2gauss(data):
+    """
+    Given data, return the mean, deviation and amplitude of the Gaussian
+    :param data: 1D array
+    :return: mean, deviation, amplitude
+    """
+    m = np.average(data)
+    dev = np.std(data)
+    A = 1./(dev*np.sqrt(2*np.pi))
+    return m, dev, A
+
+def plot_work_dist(wf, wr, kBT_in=None, fname="Wdist.png", nbins=20, dG=None, dGerr=None, units=None, kBT=None, ):
+    """
+    Plot the work distribution
+    :param wf: Forward work. This should use the same unit as kBT_in
+    :param wr: Backward work. This should use the same unit as kBT_in
+    :param kBT_in: kB*T in the unit of input work
+    :param fname: file name to save the plot
+    :param nbins: number of bins for the histogram
+    :param dG:    kB*T unit
+    :param dGerr: kB*T unit
+    :param units: (str) name of tje unit in the output
+    :param kBT:  kB*T in the unit of output
+    For unit conversion, we assume wf/kBT_in * kBT gives the target unit
+
+    :return:
+    """
+    w_f = wf.values / kBT_in * kBT  # to target unit
+    w_r = wr.values / kBT_in * kBT
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 6))
+    x1 = np.arange(len(w_f))
+    sm1 = np.convolve(w_f, np.ones(11) / 11, mode='valid')
+    x2 = np.arange(len(w_r))
+    sm2 = np.convolve(w_r, np.ones(11) / 11, mode='valid')
+
+    ax1.plot(x1,       w_f, 'g-', linewidth=2, label="Forward (0->1)", alpha=.3)
+    ax1.plot(x1[5:-5], sm1, 'g-', linewidth=3)
+    ax1.plot(x2,       w_r, 'b-', linewidth=2, label="Backward (1->0)", alpha=.3)
+    ax1.plot(x2[5:-5], sm2, 'b-', linewidth=3)
+    ax1.legend(shadow=True, fancybox=True, loc='upper center',
+               prop={'size': 12})
+    ax1.set_ylabel(f'W {units}', fontsize=20)
+    ax1.set_xlabel(r'# Snapshot', fontsize=20)
+    ax1.grid(lw=2)
+    ax1.set_xlim(0, max(len(x1), len(x2)) + 1)
+
+    bins = np.linspace(min(w_f.min(), w_r.min()), max(w_f.max(), w_r.max()), nbins)
+    ax2.hist(w_f, bins=bins, orientation='horizontal', facecolor='green',
+             alpha=.75, density=True)
+    ax2.hist(w_r, bins=bins, orientation='horizontal', facecolor='blue',
+             alpha=.75, density=True)
+
+    x = np.linspace(min(w_f.min(), w_r.min()), max(w_f.max(), w_r.max()), 1000)
+    mf, devf, Af = data2gauss(w_f)
+    mb, devb, Ab = data2gauss(w_r)
+    y1 = gauss_func(Af, mf, devf, x)
+    y2 = gauss_func(Ab, mb, devb, x)
+    ax2.plot(y1, x, 'g--', linewidth=2)
+    ax2.plot(y2, x, 'b--', linewidth=2)
+    size = max([max(y1), max(y2)])
+    res_x = [dG*kBT, dG*kBT]
+    res_y = [0, size*1.2]
+    if dG is not None and dGerr is not None:
+        ax2.plot(res_y, res_x, 'k--', linewidth=2,
+                 label=r'$\Delta$G = %.2f $\pm$ %.2f %s' % (dG*kBT, dGerr*kBT, units))
+        ax2.legend(shadow=True, fancybox=True, loc='upper center',
+                   prop={'size': 12})
+    fig.savefig(fname, dpi=300)
