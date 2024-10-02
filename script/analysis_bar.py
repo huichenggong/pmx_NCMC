@@ -5,6 +5,8 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import logging
+logging.getLogger("pymbar").setLevel(logging.ERROR) # Suppress logging in pymbar
 import pymbar
 
 def gauss_func(A, mean, dev, x):
