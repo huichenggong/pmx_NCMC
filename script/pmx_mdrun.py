@@ -256,6 +256,10 @@ if __name__ == "__main__":
                         default=3)
     parser.add_argument('--debug',
                         action='store_true', help='Print debug information')
+    parser.add_argument('--format', metavar="log_format",
+                        type=str, help='Log format. Default : "%(asctime)s - %(levelname)s - %(message)s" .'
+                                       'If you want a clean output, use "%(message)s". In debug run, this will be ignored.',
+                        default='%(asctime)s - %(levelname)s - %(message)s')
 
     args = parser.parse_args()
     settings = {"top"          : Path(args.p),
@@ -274,12 +278,19 @@ if __name__ == "__main__":
                 "re_try"       : args.re_try,
                 }
 
-    if settings["DEBUG"]:
+    if args.debug:
         # set log to DEBUG
-        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+        logging.basicConfig(
+            filename=args.log, filemode='w',
+            level=logging.DEBUG,
+            format='%(asctime)s - %(levelname)s - %(message)s')
         logging.debug(f"ti.xvg and ti.tpr will be saved.")
     else:
-        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+        logging.basicConfig(
+            filename=args.log, filemode='w',
+            level=logging.INFO,
+            format=args.format)
+
 
     if args.tmp_folder is None:
         settings["tmp_folder"] = Path(tempfile.mkdtemp(prefix="pmxNCMCRE_"))
