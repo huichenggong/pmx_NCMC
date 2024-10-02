@@ -37,10 +37,10 @@ def get_ref_T(mdp_file):
         for line in f:
             if "ref_t" in line or "ref-t" in line:
                 l = line.split(";")[0]
-                words = l.split()
-                if len(words) != 3:
+                t_words = l.split("=")[1].split()
+                if len(t_words) != 1:
                     logging.info(f"There are more than 1 ref_t in {line.rstrip()}, return the first one")
-                return float(words[2])
+                return float(t_words[0])
     raise Exception(f"Cannot find ref_t in {mdp_file}")
 
 
@@ -60,11 +60,11 @@ def mdp_check_TI(mdp_file):
     for line in mdp_lines:
         l = line.split(";")[0]
         if "init-lambda" in l or "init_lambda" in l:
-            init_lambda = float(l.split()[2])
+            init_lambda = float(l.split("=")[1])
         if "delta-lambda" in l or "delta_lambda" in l:
-            delta_lambda = float(l.split()[2])
+            delta_lambda = float(l.split("=")[1])
         if "nsteps" in l:
-            nsteps = int(l.split()[2])
+            nsteps = int(l.split("=")[1])
     if init_lambda is None or delta_lambda is None or nsteps is None:
         logging.info(f"{init_lambda} {delta_lambda} {nsteps}")
         logging.info(f"Cannot find init-lambda, delta-lambda, or nsteps in {mdp_file}")
