@@ -2,6 +2,20 @@ import os
 import shutil
 import logging
 
+import numpy as np
+from scipy.integrate import simpson
+
+def integrate_work(ti_xvg):
+    """
+    Integrate the work from a ti.xvg file. Only works for linear lambda 0->1 or 1->0
+    :param ti_xvg: str, path to ti.xvg file
+    :return: integrated work from 0 to 1. kJ/mol, the same as gromacs
+    """
+    dh_dl = np.loadtxt(ti_xvg, comments=["@", "#"])
+    lam = np.linspace(0, 1, len(dh_dl))
+    return simpson(dh_dl[:, 1], x=lam)
+
+
 def backup_if_exist(f_name):
     """
     Do gromacs style backup. If md.xtc exist, backup it to #md.xtc.1#
