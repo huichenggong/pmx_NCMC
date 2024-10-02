@@ -30,8 +30,10 @@ if __name__ == "__main__":
                         metavar='unit',
                         type=str, help='Unit for the work. Default is "kJ/mol"',
                         default="kJ",
-                        choices=["kJ", "kj", "kJ/mol", "kj/mol",
-                                 "kcal", "kCal", "kcal/mol", "kCal/mol"])
+                        choices=["kJ", "kj", "KJ", "Kj",
+                                 "kJ/mol", "kj/mol", "KJ/mol", "Kj/mol",
+                                 "kcal", "kCal", "Kcal", "KCal",
+                                 "kcal/mol", "kCal/mol", "Kcal/mol", "KCal/mol"])
     parser.add_argument("-w",
                         metavar='plot',
                         type=str, help='Work distribution plot. Default is "wplot.png"')
