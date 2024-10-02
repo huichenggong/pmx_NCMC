@@ -232,7 +232,8 @@ if __name__ == "__main__":
                         help='Folder that contains eq0.mdp, eq1.mdp, ti0.mdp, ti1.mdp. All 4 files are required. '
                              'File name should be exact.')
     parser.add_argument('-folder_start',
-                        type=str, help='Folder to start the simulation.', required=True)
+                        type=str, help='Folder to start the simulation. Default : 000000',
+                        default='000000')
     parser.add_argument('-cycle',
                         type=int, help='Number of cycles (work evaluation) to run. Default : 10',
                         default=10)
@@ -242,7 +243,7 @@ if __name__ == "__main__":
                         default=23.5)
     parser.add_argument('-MDRUN', metavar="",
                         type=str, help='command for mdrun, we will use multidir, MPI is required. Default : "mpirun -np 2 gmx_mpi mdrun"',
-                        default='mpirun -np 2 gmx_mpi mdrun')
+                        default='mpirun -np 2 --bind-to none gmx_mpi mdrun')
     parser.add_argument('-GROMPP', metavar="",
                         type=str, help='command for grompp, with additional flags. '
                                        'For example "gmx_threads_AVX_256 grompp -maxwarn 1" Default : "gmx grompp"',
@@ -257,7 +258,7 @@ if __name__ == "__main__":
     parser.add_argument('--debug',
                         action='store_true', help='Print debug information')
     parser.add_argument('--format', metavar="log_format",
-                        type=str, help='Log format. Default : "%%(asctime)s - %%(levelname)s - %%(message)s" .'
+                        type=str, help='Log format. Default : "%%(asctime)s - %%(levelname)s - %%(message)s" . '
                                        'If you want a clean output, use "%%(message)s". In debug run, this will be ignored.',
                         default='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -278,6 +279,8 @@ if __name__ == "__main__":
                 "re_try"       : args.re_try,
                 }
 
+    if settings["log"].exists():
+        util.backup_if_exist(settings["log"])
     if args.debug:
         # set log to DEBUG
         logging.basicConfig(
@@ -286,6 +289,7 @@ if __name__ == "__main__":
             format='%(asctime)s - %(levelname)s - %(message)s')
         logging.debug(f"ti.xvg and ti.tpr will be saved.")
     else:
+        # print(args.log, args.format)
         logging.basicConfig(
             filename=args.log, filemode='w',
             level=logging.INFO,
@@ -322,7 +326,7 @@ if __name__ == "__main__":
     if settings["folder_start"].name == "000000":
         logging.info("New simulation starting from cycle 0")
         settings["current_cycle"] = 0
-        for file_name in [settings["log"], settings["csv"]]:
+        for file_name in [settings["csv"]]:
             if file_name.exists():
                 util.backup_if_exist(file_name)
         with open(settings["csv"], "w") as f:
