@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import argparse
-import os
+import sys
 import shutil
 from pathlib import Path
 import time
@@ -146,7 +146,7 @@ def run_ti_mdrun(settings_dict):
         for f in ["ti.gro", "ti.cpt"]:
             shutil.copy(tmp_folder / f, rep_folder / f)
     # if dry_run, also save ti.xvg ti.tpr
-    if settings_dict["dry_run"]:
+    if settings_dict["DEBUG"]:
         for i in range(2):
             tmp_folder = settings_dict["tmp_folder"] / str(i)
             rep_folder = settings_dict["current_folder"] / str(i)
@@ -217,40 +217,45 @@ if __name__ == "__main__":
         This is the IO based implementation for running pmx in expanded ensemble. It can also be understand as 
         Replica Exchange with lambda 0 and 1 only or Non-equilibrium Candidate Monte Carlo.""")
     parser.add_argument('-p',
+                        metavar='topology',
                         type=str, help='Topology file',
                         default='topol.top')
     parser.add_argument('-log',
                         type=str, help='Log file',
                         default='md.log')
     parser.add_argument('-csv',
+                        metavar='csv output',
                         type=str, help='CSV file for saving work values. Default : md.csv',
                         default='md.csv')
-
     parser.add_argument('-mdp_folder',
                         type=str,
-                        help='Folder that contains eq0.mdp, eq1.mdp, ti0.mdp, ti1.mdp. All 4 files are required. Please don\'t save trajectory.')
+                        help='Folder that contains eq0.mdp, eq1.mdp, ti0.mdp, ti1.mdp. All 4 files are required. '
+                             'File name should be exact.')
     parser.add_argument('-folder_start',
                         type=str, help='Folder to start the simulation.', required=True)
     parser.add_argument('-cycle',
                         type=int, help='Number of cycles (work evaluation) to run. Default : 10',
                         default=10)
     parser.add_argument('-maxh',
-                        type=float, help='Terminate after this time. Default : 23.5 h',
+                        type=float, help='Terminate after this time. It will only be checked at the start of a cycle. '
+                                         'The actually running time can possibly exceed this time. Default : 23.5 h',
                         default=23.5)
-    parser.add_argument('--dry-run',
-                        action='store_true', help='Print debug information')
-    parser.add_argument('-MDRUN',
-                        type=str, help='command for mdrun, we will use multidir, MPI is required. Default : mpirun -np 2 gmx_mpi mdrun',
+    parser.add_argument('-MDRUN', metavar="",
+                        type=str, help='command for mdrun, we will use multidir, MPI is required. Default : "mpirun -np 2 gmx_mpi mdrun"',
                         default='mpirun -np 2 gmx_mpi mdrun')
-    parser.add_argument('-GROMPP',
-                        type=str, help='command for grompp, with additional flags. Default : gmx grompp',
+    parser.add_argument('-GROMPP', metavar="",
+                        type=str, help='command for grompp, with additional flags. '
+                                       'For example "gmx_threads_AVX_256 grompp -maxwarn 1" Default : "gmx grompp"',
                         default='gmx grompp')
     parser.add_argument('-tmp_folder',
-                        type=str, help='Temporary folder. Point it to the local storage on the computing node to save IO.'
-                                       ' You can also set this to /dev/shm if you have enough memory',)
+                        type=str, help='Temporary folder. Point it to the local storage on the computing node to save IO. '
+                                       'You can also set this to /dev/shm if you have enough memory. '
+                                       'Default : auto determined by python tempfile',)
     parser.add_argument('-re_try', help='Number of re-try if the simulation fails. Default : 3',
                         type=int,
                         default=3)
+    parser.add_argument('--debug',
+                        action='store_true', help='Print debug information')
 
     args = parser.parse_args()
     settings = {"top"          : Path(args.p),
@@ -263,13 +268,13 @@ if __name__ == "__main__":
                 "MDRUN"        : args.MDRUN,
                 "GROMPP"       : args.GROMPP,
                 "tmp_folder"   : args.tmp_folder,
-                "dry_run"      : args.dry_run,
+                "DEBUG"        : args.debug,
                 "current_cycle": 0,
                 "base_path"    : Path.cwd(),
                 "re_try"       : args.re_try,
                 }
 
-    if settings["dry_run"]:
+    if settings["DEBUG"]:
         # set log to DEBUG
         logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
         logging.debug(f"ti.xvg and ti.tpr will be saved.")
@@ -341,9 +346,15 @@ if __name__ == "__main__":
         settings['current_cycle'] += 1
         current_folder = Path(f"{settings['current_cycle']:06d}")
 
+    if settings["re_try"] <= 0:
+        logging.info(f"re_try should be larger than 0")
+        exit(1)
+
 
 
     kBT = 8.314462618e-3 * settings["ref_t"] # kJ * K/mol
+    logging.info(f"Command line: {' '.join(sys.argv)}")
+    logging.info(f"pmx_mdrun version {pmxNCMC.__version__}")
     logging.info(f"# Simulation settings #############################################################################")
     logging.info(f"topology   : {settings['top']}")
     logging.info(f"log output : {settings['log']}")
