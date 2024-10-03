@@ -69,13 +69,16 @@ if __name__ == "__main__":
     # unit conversion
     if args.unit.lower() in ["kj", "kj/mol"]:
         unit = "kJ/mol"
-        kBT = 8.314462618e-3 * temperature
+        kB = 8.314462618e-3
     elif args.unit.lower() in ["kcal", "kcal/mol"]:
         unit = "kcal/mol"
-        kBT = 1.987204259e-3 * temperature
+        kB = 1.987204259e-3
     else:
         raise ValueError(f"Units should be kJ/mol or kcal/mol. {args.unit} is not supported")
-    print(f"The selected unit is {unit}. kBT = {kBT:.2f} {unit}")
+    kBT = kB * temperature
+    print(f"The selected unit is {unit}.")
+    print(f"kB  = {kB:.5e} {unit}/T")
+    print(f"kBT = {kBT:.2f} {unit}")
 
     work01 = df[df.columns[1]] # 0->1, kJ/mol
     work10 = df[df.columns[2]]
