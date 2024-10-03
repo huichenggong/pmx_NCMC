@@ -25,7 +25,6 @@ def backup_if_exist(f_name):
         bak = f"#{f_name}.{i}#"
         if not os.path.exists(bak):
             shutil.move(f_name, bak)
-            logging.info(f"File {f_name} exists, backup to {bak}")
             return bak
     raise Exception(f"Cannot backup {f_name}")
 

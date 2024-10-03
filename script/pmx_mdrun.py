@@ -278,7 +278,6 @@ if __name__ == "__main__":
                 "base_path"    : Path.cwd(),
                 "re_try"       : args.re_try,
                 }
-
     if settings["log"].exists():
         util.backup_if_exist(settings["log"])
     if args.debug:
@@ -368,7 +367,13 @@ if __name__ == "__main__":
 
 
     kBT = 8.314462618e-3 * settings["ref_t"] # kJ * K/mol
-    logging.info(f"Command line: {' '.join(sys.argv)}")
+    command_line = ""
+    for word in sys.argv:
+        if " " in word:
+            command_line += f'"{word}" '
+        else:
+            command_line += word + " "
+    logging.info(f"Command line: {command_line}")
     logging.info(f"pmx_mdrun version {pmxNCMC.__version__}")
     logging.info(f"# Simulation settings #############################################################################")
     logging.info(f"topology   : {settings['top']}")
