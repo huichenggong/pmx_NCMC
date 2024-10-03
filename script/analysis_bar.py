@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import pmxNCMC
+import sys
 import argparse
 import numpy as np
 import pandas as pd
@@ -15,11 +16,12 @@ if __name__ == "__main__":
         description=f"""Version {pmxNCMC.__version__}.""")
     parser.add_argument("-csv",
                         metavar='csv input',
-                        type=str, help="csv file from pmx_mdrun.py Default : md.csv", required=True,
+                        type=str, help="csv file from pmx_mdrun.py. The 2nd, 3rd columns are the work in kJ.mol. "
+                                       "Default : md.csv",
                         default="md.csv")
     parser.add_argument("-t",
                         metavar='temperature',
-                        type=float, help='Temperature in K, Default is 298.15 K', default=298.15)
+                        type=float, help='Temperature in K, If not given, try to read from the heading of the csv')
     parser.add_argument("-oA",
                         metavar='work output 0->1',
                         type=str, help='File.dat where to save all the work value (for pmx). Default is "integA.dat"')
@@ -40,27 +42,51 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+
+
+
+    print(f"Command line arguments: {' '.join(sys.argv)}")
+    print(f"Reading {args.csv}")
+    df = pd.read_csv(args.csv)
+    if len(df.columns[-1])>7:
+        words = df.columns[-1].split("_")
+        if len(words) == 2:
+            temperature = float(df.columns[-1].split("_")[-1])
+        else:
+            raise ValueError(f"Cannot read temperature from the last column name: {df.columns[-1]}")
+        if args.t:
+            np.allclose(temperature, args.t, atol=1e-4)
+            print(f"Temperature is the same in the -t and {args.csv}: {temperature} K")
+        else:
+            print(f"Temperature is read from the csv file: {temperature} K")
+    else:
+        if not args.t:
+            raise ValueError(f"Temperature is not found in the csv file, please give it by -t")
+        else:
+            temperature = args.t
+            print(f"Temperature is given by argument -t : {args.t} K")
+    kBT_gmx = 8.314462618e-3 * temperature  # kJ/mol
+    # unit conversion
     if args.unit.lower() in ["kj", "kj/mol"]:
         unit = "kJ/mol"
-        kBT = 8.314462618e-3 * args.t
+        kBT = 8.314462618e-3 * temperature
     elif args.unit.lower() in ["kcal", "kcal/mol"]:
         unit = "kcal/mol"
-        kBT = 1.987204259e-3 * args.t
+        kBT = 1.987204259e-3 * temperature
     else:
         raise ValueError(f"Units should be kJ/mol or kcal/mol. {args.unit} is not supported")
+    print(f"The selected unit is {unit}. kBT = {kBT:.2f} {unit}")
 
-
-    kBT_gmx = 8.314462618e-3 * args.t  # kJ/mol
-    df = pd.read_csv(args.csv)
-    heading = list(df.keys())
-    work01 = df[heading[1]]
-    work10 = df[heading[2]]
+    work01 = df[df.columns[1]] # 0->1, kJ/mol
+    work10 = df[df.columns[2]]
     try:
         # pymbar 3
         dG, dGe = pymbar.BAR(work01 / kBT_gmx, work10 / kBT_gmx)
+        print("pymbar 3 is used. >>> pymbar.BAR(w_f, w_r)")
     except AttributeError as e:
         # pymbar 4
         res = pymbar.other_estimators.bar(work01 / kBT_gmx, work10 / kBT_gmx)
+        print("pymbar 4 is used. >>> pymbar.other_estimators.bar(w_f, w_r)")
         dG = res["Delta_f"]
         dGe = res["dDelta_f"]
 
