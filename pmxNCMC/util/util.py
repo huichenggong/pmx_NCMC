@@ -116,17 +116,23 @@ def plot_work_dist(wf, wr, kBT_in=None, fname="Wdist.png", nbins=20, dG=None, dG
     w_r = wr.values / kBT_in * kBT
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 6))
     x1 = np.arange(len(w_f))
-    sm1 = np.convolve(w_f, np.ones(11) / 11, mode='valid')
     x2 = np.arange(len(w_r))
-    sm2 = np.convolve(w_r, np.ones(11) / 11, mode='valid')
-
     ax1.plot(x1,       w_f, 'g-', linewidth=2, label="Forward (0->1)", alpha=.3)
-    ax1.plot(x1[5:-5], sm1, 'g-', linewidth=3)
     ax1.plot(x2,       w_r, 'b-', linewidth=2, label="Backward (1->0)", alpha=.3)
-    ax1.plot(x2[5:-5], sm2, 'b-', linewidth=3)
+    if len(x1) > 12:
+        ax1.plot(x1, w_f, 'g-', linewidth=2, label="Forward (0->1)", alpha=.3)
+        sm1 = np.convolve(w_f, np.ones(11) / 11, mode='valid')
+        ax1.plot(x1[5:-5], sm1, 'g-', linewidth=3)
+    else:
+        ax1.plot(x1, w_f, 'g-', linewidth=2, label="Forward (0->1)")
+    if len(x2) > 12:
+        sm2 = np.convolve(w_r, np.ones(11) / 11, mode='valid')
+        ax1.plot(x2[5:-5], sm2, 'b-', linewidth=3)
+    else:
+        ax1.plot(x2, w_r, 'b-', linewidth=2, label="Backward (1->0)")
     ax1.legend(shadow=True, fancybox=True, loc='upper center',
                prop={'size': 12})
-    ax1.set_ylabel(f'W {units}', fontsize=20)
+    ax1.set_ylabel(f'W [{units}]', fontsize=20)
     ax1.set_xlabel(r'# Snapshot', fontsize=20)
     ax1.grid(lw=2)
     ax1.set_xlim(0, max(len(x1), len(x2)) + 1)
