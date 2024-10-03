@@ -24,13 +24,15 @@ if __name__ == "__main__":
                         type=float, help='Temperature in K, If not given, try to read from the heading of the csv')
     parser.add_argument("-oA",
                         metavar='work output 0->1',
-                        type=str, help='File.dat where to save all the work value (for pmx). Default is "integA.dat"')
+                        type=str, help='File.dat where to save all the work value (for pmx). The unit is kJ/mol. '
+                                       'Default is "integA.dat"')
     parser.add_argument("-oB",
                         metavar='work output 1->0',
-                        type=str, help='File.dat where to save all the work value (for pmx). Default is "integB.dat"')
+                        type=str, help='File.dat where to save all the work value (for pmx). The unis is kJ/mol. '
+                                       'Default is "integB.dat"')
     parser.add_argument("--unit",
                         metavar='unit',
-                        type=str, help='Unit for the work. Default is "kJ/mol"',
+                        type=str, help='Unit for the print out and plotting. Default is "kJ/mol"',
                         default="kJ",
                         choices=["kJ", "kj", "KJ", "Kj",
                                  "kJ/mol", "kj/mol", "KJ/mol", "Kj/mol",
