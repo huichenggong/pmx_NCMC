@@ -330,7 +330,7 @@ if __name__ == "__main__":
             if file_name.exists():
                 util.backup_if_exist(file_name)
         with open(settings["csv"], "w") as f:
-            f.writelines(["Cycle,Work_01 (kJ/mol),Work_10 (kJ/mol),Acceptance_ratio,Accept\n"])
+            f.writelines([f"Cycle,Work_01 (kJ/mol),Work_10 (kJ/mol),Acceptance_ratio,Accept_{settings['ref_t']}\n"])
     elif int(settings["folder_start"].name) < 0:
         logging.info(f"Invalid folder_start {settings['folder_start']}")
         exit(1)
