@@ -95,9 +95,58 @@ def data2gauss(data):
     A = 1./(dev*np.sqrt(2*np.pi))
     return m, dev, A
 
+def plot_work_dist_line(ax, w_f, w_r,  smooth_window=11):
+    """
+    Plot the work distribution in a line plot
+    :param ax: matplotlib axis
+    :param w_f: Forward work in the target unit
+    :param w_r: Reverse work in the target unit
+    :param smooth_window: size of the window in moving window average (smoothing).
+        If there is less data, smoothed line will not be plotted
+    :return: None
+    """
+    x1 = np.arange(len(w_f))
+    x2 = np.arange(len(w_r))
+    if len(x1) > smooth_window+1:
+        ax.plot(x1, w_f, 'g-', linewidth=2, label="Forward (0->1)", alpha=.3)
+        sm1 = np.convolve(w_f, np.ones(11) / 11, mode='valid')
+        ax.plot(x1[5:-5], sm1, 'g-', linewidth=3)
+    else:
+        ax.plot(x1, w_f, 'g-', linewidth=3, label="Forward (0->1)")
+    if len(x2) > smooth_window+1:
+        ax.plot(x2, w_r, 'b-', linewidth=2, label="Backward (1->0)", alpha=.3)
+        sm2 = np.convolve(w_r, np.ones(11) / 11, mode='valid')
+        ax.plot(x2[5:-5], sm2, 'b-', linewidth=3)
+    else:
+        ax.plot(x2, w_r, 'b-', linewidth=3, label="Backward (1->0)")
+    ax.set_xlim(0, max(len(x1), len(x2)) + 1)
+
+def plot_work_dist_hist(ax, w_f, w_r, bins=20):
+    """
+    Plot the work distribution in a histogram in the horizontal orientation, so that it can be compared side by side with the line plot
+    :param ax: matplotlib axis
+    :param w_f: Forward work in the target unit
+    :param w_r: Reverse work in the target unit
+    :param bins: for the histogram
+    :return:
+    """
+    ax.hist(w_f, bins=bins, orientation='horizontal', facecolor='green',
+             alpha=.75, density=True)
+    ax.hist(w_r, bins=bins, orientation='horizontal', facecolor='blue',
+             alpha=.75, density=True)
+    x = np.linspace(min(w_f.min(), w_r.min()), max(w_f.max(), w_r.max()), 1000)
+    mf, devf, Af = data2gauss(w_f)
+    mb, devb, Ab = data2gauss(w_r)
+    y1 = gauss_func(Af, mf, devf, x)
+    y2 = gauss_func(Ab, mb, devb, x)
+    ax.plot(y1, x, 'g--', linewidth=2)
+    ax.plot(y2, x, 'b--', linewidth=2)
+
 def plot_work_dist(wf, wr, kBT_in=None, fname="Wdist.png", nbins=20, dG=None, dGerr=None, units=None, kBT=None, ):
     """
     Plot the work distribution
+    In ax1, line plot of forward and backward work
+    In ax2, histogram of two work distribution in the horizontal orientation
     :param wf: Forward work. This should use the same unit as kBT_in
     :param wr: Backward work. This should use the same unit as kBT_in
     :param kBT_in: kB*T in the unit of input work
@@ -114,47 +163,20 @@ def plot_work_dist(wf, wr, kBT_in=None, fname="Wdist.png", nbins=20, dG=None, dG
     w_f = wf.values / kBT_in * kBT  # to target unit
     w_r = wr.values / kBT_in * kBT
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 6))
-    x1 = np.arange(len(w_f))
-    x2 = np.arange(len(w_r))
-
-
-    if len(x1) > 12:
-        ax1.plot(x1, w_f, 'g-', linewidth=2, label="Forward (0->1)", alpha=.3)
-        sm1 = np.convolve(w_f, np.ones(11) / 11, mode='valid')
-        ax1.plot(x1[5:-5], sm1, 'g-', linewidth=3)
-    else:
-        ax1.plot(x1, w_f, 'g-', linewidth=3, label="Forward (0->1)")
-    if len(x2) > 12:
-        ax1.plot(x2, w_r, 'b-', linewidth=2, label="Backward (1->0)", alpha=.3)
-        sm2 = np.convolve(w_r, np.ones(11) / 11, mode='valid')
-        ax1.plot(x2[5:-5], sm2, 'b-', linewidth=3)
-    else:
-        ax1.plot(x2, w_r, 'b-', linewidth=3, label="Backward (1->0)")
+    plot_work_dist_line(ax1, w_f, w_r)
     ax1.legend(loc='upper center', prop={'size': 12})
     ax1.set_ylabel(f'W [{units}]', fontsize=20)
     ax1.set_xlabel(r'# Snapshot', fontsize=20)
     ax1.grid(lw=2)
-    ax1.set_xlim(0, max(len(x1), len(x2)) + 1)
+
 
     bins = np.linspace(min(w_f.min(), w_r.min()), max(w_f.max(), w_r.max()), nbins)
-    ax2.hist(w_f, bins=bins, orientation='horizontal', facecolor='green',
-             alpha=.75, density=True)
-    ax2.hist(w_r, bins=bins, orientation='horizontal', facecolor='blue',
-             alpha=.75, density=True)
-
-    x = np.linspace(min(w_f.min(), w_r.min()), max(w_f.max(), w_r.max()), 1000)
-    mf, devf, Af = data2gauss(w_f)
-    mb, devb, Ab = data2gauss(w_r)
-    y1 = gauss_func(Af, mf, devf, x)
-    y2 = gauss_func(Ab, mb, devb, x)
-    ax2.plot(y1, x, 'g--', linewidth=2)
-    ax2.plot(y2, x, 'b--', linewidth=2)
-    size = max([max(y1), max(y2)])
+    plot_work_dist_hist(ax2, w_f, w_r, bins)
     res_x = [dG*kBT, dG*kBT]
-    res_y = [0, size*1.2]
+    res_y = [0, ax2.get_xlim()[1]*0.95]
     if dG is not None and dGerr is not None:
         ax2.plot(res_y, res_x, 'k--', linewidth=2,
                  label=r'$\Delta$G = %.2f $\pm$ %.2f %s' % (dG*kBT, dGerr*kBT, units))
-        ax2.legend(shadow=True, fancybox=True, loc='upper center',
-                   prop={'size': 12})
+        ax2.legend(loc='upper center', prop={'size': 12})
+    ax2.set_ylim(ax1.get_ylim())
     fig.savefig(fname, dpi=300)
