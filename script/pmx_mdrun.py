@@ -348,6 +348,8 @@ if __name__ == "__main__":
             exit(1)
         else:
             current_folder = Path(f"{settings['current_cycle']:06d}")
+
+        # prepare starting cpt,gro
         if words[-1] == "A":
             s0 = current_folder / "1/ti.cpt", current_folder / "1/ti.gro"
             s1 = current_folder / "0/ti.cpt", current_folder / "0/ti.gro"
@@ -357,6 +359,11 @@ if __name__ == "__main__":
         else:
             logging.info(f"Invalid csv line {l}, cannot proceed with restart.")
             exit(1)
+        for f in s0 + s1:
+            logging.debug(f"Check file {f}")
+            if not f.exists():
+                logging.info(f"File {f} not found")
+                exit(1)
         settings['current_cycle'] += 1
         current_folder = Path(f"{settings['current_cycle']:06d}")
 
