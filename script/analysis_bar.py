@@ -47,6 +47,7 @@ if __name__ == "__main__":
 
 
 
+    print(f"pmx_mdrun version {pmxNCMC.__version__}")
     print(f"Command line arguments:")
     print(f"  {' '.join(sys.argv)}")
     print(f"Reading {args.csv}")
