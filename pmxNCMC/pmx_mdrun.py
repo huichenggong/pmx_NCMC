@@ -330,6 +330,11 @@ def main():
     if settings["folder_start"].name == "000000":
         logging.info("New simulation starting from cycle 0")
         settings["current_cycle"] = 0
+        # make cure 2 tpr exist
+        for tpr in [settings["folder_start"]/"0/eq.tpr", settings["folder_start"]/"1/eq.tpr"]:
+            if not tpr.exists():
+                logging.info(f"File {tpr} not found. Please prepare {settings['folder_start']/'0/eq.tpr'} and {settings['folder_start']/'1/eq.tpr'} using grompp")
+                exit(1)
         for file_name in [settings["csv"]]:
             if file_name.exists():
                 util.backup_if_exist(file_name)
@@ -338,7 +343,7 @@ def main():
     elif int(settings["folder_start"].name) < 0:
         logging.info(f"Invalid folder_start {settings['folder_start']}")
         exit(1)
-    else:
+    else: # this is a restart (append) job
         settings["current_cycle"] = int(settings["folder_start"].name)
         logging.info(f"Restart from Cycle {settings['current_cycle']}, assume this Cycle has been finished")
         # read csv, prepare s0, s1
