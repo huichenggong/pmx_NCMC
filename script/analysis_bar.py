@@ -13,7 +13,9 @@ import pymbar
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description=f"""Version {pmxNCMC.__version__}.""")
+        description=f"""Version {pmxNCMC.__version__}. Read the csv file from pmx_mdrun.py and estimate the free energy difference using BAR.
+                        Sample usage: analysis_bar.py -csv md.csv -w wplot.png --unit kcal 
+                        # Work and temperature will be read from md.csv. The work for each snapshot will be plotted in wplot.png. The unit is kcal/mol.""")
     parser.add_argument("-csv",
                         metavar='csv input',
                         type=str, help="csv file from pmx_mdrun.py. The 2nd, 3rd columns are the work in kJ.mol. "
