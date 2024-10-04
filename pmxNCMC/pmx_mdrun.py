@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import sys
+import os
 import shutil
 from pathlib import Path
 import time
@@ -78,7 +79,7 @@ def run_eq_mdrun(settings_dict):
     mdrun = settings_dict["MDRUN"]
     multi_dir = f"-multidir {current_folder}/0 {current_folder}/1"
     command = f"{mdrun} -s eq.tpr {multi_dir} -deffnm eq > {current_folder / 'mdrun_eq.log'} 2>&1"
-    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=settings_dict["env"])
     p.wait()
     # make sure 2 eq.gro files are generated
     for f in [current_folder / "0" / "eq.gro", current_folder / "1" / "eq.gro"]:
@@ -127,7 +128,7 @@ def run_ti_mdrun(settings_dict):
     current_folder = settings_dict["current_folder"]
     multi_dir = f"-multidir {tmp_folder}/0 {tmp_folder}/1"
     command = f"{mdrun} -s ti.tpr {multi_dir} -deffnm ti > {current_folder / 'mdrun_ti.log'} 2>&1"
-    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=settings_dict["env"])
     p.wait()
 
     # make sure 2 ti.gro files are generated
@@ -265,6 +266,7 @@ def main():
                         default='%(asctime)s - %(levelname)s - %(message)s')
 
     args = parser.parse_args()
+    env = os.environ.copy()
     settings = {"top": Path(args.p),
                 "log": Path(args.log),
                 "csv": Path(args.csv),
@@ -279,6 +281,7 @@ def main():
                 "current_cycle": 0,
                 "base_path": Path.cwd(),
                 "re_try": args.re_try,
+                "env"   : env
                 }
     if settings["log"].exists():
         util.backup_if_exist(settings["log"])
