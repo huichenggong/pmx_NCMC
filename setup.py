@@ -24,11 +24,14 @@ setup(
     description='IO based implementation of NCMC in pmx',
     packages=find_packages(),
     install_requires=["pymbar","numpy", "pandas","matplotlib","scipy>=1.7.0"],
-    scripts=['script/pmx_mdrun.py',
-             'script/analysis_bar.py',
-             ],
-    classifiers=[
-        'Programming Language :: Python :: 3',
-        # Include other relevant classifiers
-    ],
+    # scripts=['script/pmx_mdrun.py',
+    #          'script/analysis_bar.py',
+    #          ],
+    entry_points={
+        'console_scripts': [
+            'pmx_mdrun=pmxNCMC.pmx_mdrun:main',
+            'analysis_bar=pmxNCMC.analysis_bar:main',
+        ],
+    },
+    classifiers=['Programming Language :: Python :: 3',],
 )

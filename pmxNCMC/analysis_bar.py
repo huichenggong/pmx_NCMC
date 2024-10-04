@@ -10,12 +10,11 @@ logging.getLogger("pymbar").setLevel(logging.ERROR) # Suppress logging in pymbar
 import pymbar
 
 
-
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(
         description=f"""Version {pmxNCMC.__version__}. Read the csv file from pmx_mdrun.py and estimate the free energy difference using BAR.
-                        Sample usage: analysis_bar.py -csv md.csv -w wplot.png --unit kcal 
-                        # Work and temperature will be read from md.csv. The work for each snapshot will be plotted in wplot.png. The unit is kcal/mol.""")
+                            Sample usage: analysis_bar.py -csv md.csv -w wplot.png --unit kcal 
+                            # Work and temperature will be read from md.csv. The work for each snapshot will be plotted in wplot.png. The unit is kcal/mol.""")
     parser.add_argument("-csv",
                         metavar='csv input',
                         type=str, help="csv file from pmx_mdrun.py. The 2nd, 3rd columns are the work in kJ.mol. "
@@ -46,9 +45,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-
-
-
     print(f"pmx_mdrun version {pmxNCMC.__version__}")
     print(f"Command line arguments:")
     print(f"  {' '.join(sys.argv)}")
@@ -56,7 +52,7 @@ if __name__ == "__main__":
     df = pd.read_csv(args.csv)
 
     # get temperature
-    if len(df.columns[-1])>7:
+    if len(df.columns[-1]) > 7:
         words = df.columns[-1].split("_")
         if len(words) == 2:
             temperature = float(df.columns[-1].split("_")[-1])
@@ -90,7 +86,7 @@ if __name__ == "__main__":
     print(f"kBT = {kBT:.2f} {unit}")
 
     # BAR estimation
-    work01 = df[df.columns[1]] # 0->1, kJ/mol
+    work01 = df[df.columns[1]]  # 0->1, kJ/mol
     work10 = df[df.columns[2]]
     try:
         # pymbar 3
@@ -102,16 +98,19 @@ if __name__ == "__main__":
         logging.debug("pymbar 4 is used. >>> pymbar.other_estimators.bar(w_f, w_r)")
         dG = res["Delta_f"]
         dGe = res["dDelta_f"]
-    print(f"DeltaG = {dG*kBT:.2f} +- {dGe*kBT:.2f} {unit}")
+    print(f"DeltaG = {dG * kBT:.2f} +- {dGe * kBT:.2f} {unit}")
 
     # save work for pmx
     if args.oA:
         work01.to_csv(args.oA, sep=' ', header=False)
     if args.oB:
-        (work10*-1).to_csv(args.oB, sep=' ', header=False)
+        (work10 * -1).to_csv(args.oB, sep=' ', header=False)
 
     # plot
     if args.w:
         pmxNCMC.util.plot_work_dist(work01, -1 * work10, kBT_in=kBT_gmx,
                                     fname=args.w, nbins=20, dG=dG, dGerr=dGe, units=unit, kBT=kBT)
 
+
+if __name__ == "__main__":
+    main()

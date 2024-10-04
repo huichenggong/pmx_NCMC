@@ -209,13 +209,12 @@ def logging_ave_time_cycle(ave_time_cycle, time_cycle):
         ave_time_cycle_str = f"{ave_time_cycle:.2f} s"
     logging.info(f"Time of this cycle : {time_cycle:.2f} s. Average time per cycle: {ave_time_cycle_str}")
 
-
-if __name__ == "__main__":
+def main():
     t0 = time.time()
     parser = argparse.ArgumentParser(
-        description = f"""Version {pmxNCMC.__version__}. 
-        This is the IO based implementation for running pmx in expanded ensemble. It can also be understand as 
-        Replica Exchange with lambda 0 and 1 only or Non-equilibrium Candidate Monte Carlo.""")
+        description=f"""Version {pmxNCMC.__version__}. 
+            This is the IO based implementation for running pmx in expanded ensemble. It can also be understand as 
+            Replica Exchange with lambda 0 and 1 only or Non-equilibrium Candidate Monte Carlo.""")
     parser.add_argument('-p',
                         metavar='topology',
                         type=str, help='Topology file',
@@ -242,16 +241,19 @@ if __name__ == "__main__":
                                          'The actually running time can possibly exceed this time. Default : 23.5 h',
                         default=23.5)
     parser.add_argument('-MDRUN', metavar="",
-                        type=str, help='command for mdrun, we will use multidir, MPI is required. Default : "mpirun -np 2 gmx_mpi mdrun"',
+                        type=str,
+                        help='command for mdrun, we will use multidir, MPI is required. '
+                             'Default : "mpirun -np 2 --bind-to none gmx_mpi mdrun"',
                         default='mpirun -np 2 --bind-to none gmx_mpi mdrun')
     parser.add_argument('-GROMPP', metavar="",
                         type=str, help='command for grompp, with additional flags. '
                                        'For example "gmx_threads_AVX_256 grompp -maxwarn 1" Default : "gmx grompp"',
                         default='gmx grompp')
     parser.add_argument('-tmp_folder',
-                        type=str, help='Temporary folder. Point it to the local storage on the computing node to save IO. '
-                                       'You can also set this to /dev/shm if you have enough memory. '
-                                       'Default : auto determined by python tempfile',)
+                        type=str,
+                        help='Temporary folder. Point it to the local storage on the computing node to save IO. '
+                             'You can also set this to /dev/shm if you have enough memory. '
+                             'Default : auto determined by python tempfile', )
     parser.add_argument('-re_try', help='Number of re-try if the simulation fails. Default : 3',
                         type=int,
                         default=3)
@@ -263,20 +265,20 @@ if __name__ == "__main__":
                         default='%(asctime)s - %(levelname)s - %(message)s')
 
     args = parser.parse_args()
-    settings = {"top"          : Path(args.p),
-                "log"          : Path(args.log),
-                "csv"          : Path(args.csv),
-                "mdp_folder"   : Path(args.mdp_folder),
-                "cycle"        : args.cycle,
-                "folder_start" : Path(args.folder_start),
-                "maxh"         : args.maxh,
-                "MDRUN"        : args.MDRUN,
-                "GROMPP"       : args.GROMPP,
-                "tmp_folder"   : args.tmp_folder,
-                "DEBUG"        : args.debug,
+    settings = {"top": Path(args.p),
+                "log": Path(args.log),
+                "csv": Path(args.csv),
+                "mdp_folder": Path(args.mdp_folder),
+                "cycle": args.cycle,
+                "folder_start": Path(args.folder_start),
+                "maxh": args.maxh,
+                "MDRUN": args.MDRUN,
+                "GROMPP": args.GROMPP,
+                "tmp_folder": args.tmp_folder,
+                "DEBUG": args.debug,
                 "current_cycle": 0,
-                "base_path"    : Path.cwd(),
-                "re_try"       : args.re_try,
+                "base_path": Path.cwd(),
+                "re_try": args.re_try,
                 }
     if settings["log"].exists():
         util.backup_if_exist(settings["log"])
@@ -294,7 +296,6 @@ if __name__ == "__main__":
             level=logging.INFO,
             format=args.format)
 
-
     if args.tmp_folder is None:
         settings["tmp_folder"] = Path(tempfile.mkdtemp(prefix="pmxNCMCRE_"))
     else:
@@ -310,7 +311,8 @@ if __name__ == "__main__":
         if not (settings["mdp_folder"] / mdp_name).exists():
             logging.info(f"File {settings['mdp_folder'] / mdp_name} not found")
             exit(1)
-    ref_t_list = [util.get_ref_T(settings["mdp_folder"] / mdp_name) for mdp_name in ["eq0.mdp", "eq1.mdp", "ti0.mdp", "ti1.mdp"]]
+    ref_t_list = [util.get_ref_T(settings["mdp_folder"] / mdp_name) for mdp_name in
+                  ["eq0.mdp", "eq1.mdp", "ti0.mdp", "ti1.mdp"]]
     # all close
     if not np.allclose(ref_t_list, ref_t_list[0]):
         logging.info(f"Reference temperature are not the same: {ref_t_list}")
@@ -371,9 +373,7 @@ if __name__ == "__main__":
         logging.info(f"re_try should be larger than 0")
         exit(1)
 
-
-
-    kBT = 8.314462618e-3 * settings["ref_t"] # kJ * K/mol
+    kBT = 8.314462618e-3 * settings["ref_t"]  # kJ * K/mol
     command_line = ""
     for word in sys.argv:
         if " " in word:
@@ -387,14 +387,15 @@ if __name__ == "__main__":
     logging.info(f"log output : {settings['log']}")
     logging.info(f"csv output : {settings['csv']}")
     logging.info(f"mdp_folder : {settings['mdp_folder']}")
-    logging.info(f"mdp files  : {settings['mdp_folder']/'eq0.mdp'} {settings['mdp_folder']/'eq1.mdp'} {settings['mdp_folder']/'ti0.mdp'} {settings['mdp_folder']/'ti1.mdp'}")
+    logging.info(
+        f"mdp files  : {settings['mdp_folder'] / 'eq0.mdp'} {settings['mdp_folder'] / 'eq1.mdp'} {settings['mdp_folder'] / 'ti0.mdp'} {settings['mdp_folder'] / 'ti1.mdp'}")
     logging.info(f"Temperature: {settings['ref_t']} K")
     logging.info(f"kBT        : {kBT} kJ/mol")
     logging.info(f"MDRUN  command : {settings['MDRUN']}")
     logging.info(f"GROMPP command : {settings['GROMPP']}")
     logging.info(f"tmp_folder     : {settings['tmp_folder']}")
     logging.info(f"Cycle (eq+ti) to run : {settings['cycle']}")
-    logging.info(f"Maximum running time : {settings['maxh']} h = {settings['maxh']*60} min")
+    logging.info(f"Maximum running time : {settings['maxh']} h = {settings['maxh'] * 60} min")
     logging.info(f"Re-try if failed     : {settings['re_try']}")
     logging.info(f"# Simulation settings End #########################################################################")
 
@@ -410,8 +411,7 @@ if __name__ == "__main__":
 
             settings["current_folder"] = Path(f"{settings['current_cycle']:06d}")
             logging.info(f"Cycle {settings['current_cycle']}, eq")
-            prepare_current_folder(settings['current_folder']) # mkdir current_folder/0, current_folder/1
-
+            prepare_current_folder(settings['current_folder'])  # mkdir current_folder/0, current_folder/1
 
             succ_flag = False
             for re_try in range(settings["re_try"]):
@@ -427,27 +427,30 @@ if __name__ == "__main__":
                     succ_flag = True
                     break
                 except RuntimeError as e:
-                    logging.info(f"Cycle {settings['current_cycle']} failed, retry {re_try+1}")
+                    logging.info(f"Cycle {settings['current_cycle']} failed, retry {re_try + 1}")
                     logging.info(f"Error: {e}")
             if not succ_flag:
                 logging.info(f"Cycle {settings['current_cycle']} failed {settings['re_try']} fimes, exit")
                 raise RuntimeError(f"Cycle {settings['current_cycle']} failed {settings['re_try']} fimes, exit")
 
             # swap attempt
-            _, csv_line, s0, s1 =  swap_check(w01, w10, kBT, settings)
+            _, csv_line, s0, s1 = swap_check(w01, w10, kBT, settings)
             with open(settings["csv"], "a") as f:
                 f.write(csv_line)
 
             settings["current_cycle"] += 1
             t_tock = time.time()
-            logging_ave_time_cycle((t_tock-t0) / (cycle+1), t_tock-t_tick)
+            logging_ave_time_cycle((t_tock - t0) / (cycle + 1), t_tock - t_tick)
             t_tick = t_tock
 
     finally:
-        t1 = time.time()-t0
+        t1 = time.time() - t0
         logging.info(f"pmx_mdrun finished in {int(t1 // 3600)} h {int((t1 % 3600) // 60)} min {(t1 % 60):.1f} s")
         logging.info(f"Cleaning up ...")
         shutil.rmtree(settings["tmp_folder"])
         logging.info(f"ALL Done")
 
+
+if __name__ == "__main__":
+    main()
 
