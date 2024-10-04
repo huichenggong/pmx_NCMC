@@ -4,6 +4,11 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.integrate import simpson
+logging.getLogger("pymbar").setLevel(logging.ERROR) # Suppress logging in pymbar
+import pymbar
+
+kB_kj_mol   = 8.314462618e-3
+kB_kcal_mol = 1.987204259e-3
 
 def integrate_work(ti_xvg):
     """
@@ -75,6 +80,25 @@ def mdp_check_TI(mdp_file):
     logging.info(f"MDP file {mdp_file} does not have the correct init-lambda, delta-lambda, nsteps")
     logging.info(f"init-lambda={init_lambda}, delta-lambda * nsteps = {delta_lambda * nsteps}")
     return False
+
+def free_E_bar(work01, work10):
+    """
+    Given the work in the two direction, estimate the free energy using BAR
+    everything should be in kBT unit
+    Will try pymbar 3 and 4.
+    :param work01:
+    :param work10:
+    :return: dG, dG_error
+    """
+    try:
+        # pymbar 3
+        dG, dGe = pymbar.BAR(work01, work10)
+    except AttributeError as e:
+        # pymbar 4
+        res = pymbar.other_estimators.bar(work01, work10)
+        dG = res["Delta_f"]
+        dGe = res["dDelta_f"]
+    return dG, dGe
 
 # for plotting
 def gauss_func(A, mean, dev, x):

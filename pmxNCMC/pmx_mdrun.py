@@ -9,6 +9,7 @@ import logging
 import tempfile
 
 import numpy as np
+import pandas as pd
 from scipy import integrate
 
 import pmxNCMC
@@ -381,7 +382,7 @@ def main():
         logging.info(f"re_try should be larger than 0")
         exit(1)
 
-    kBT = 8.314462618e-3 * settings["ref_t"]  # kJ * K/mol
+    kBT = util.kB_kj_mol * settings["ref_t"]  # kJ * K/mol
     command_line = ""
     for word in sys.argv:
         if " " in word:
@@ -450,6 +451,14 @@ def main():
             t_tock = time.time()
             logging_ave_time_cycle((t_tock - t0) / (cycle + 1), t_tock - t_tick)
             t_tick = t_tock
+        df = pd.read_csv(settings["csv"])
+        logging.info(f"Read {settings['csv']} and estimate free energy difference using {len(df)} cycles.")
+        work01 = df[df.columns[1]]  # 0->1, kJ/mol
+        work10 = df[df.columns[2]]
+        dG, dGe = util.free_E_bar(work01 / kBT, work10 / kBT)
+        logging.info(f"DeltaG = {dG*kBT:6.2f} +- {dGe*kBT:4.2f} kJ/mol")
+        kBT_kcal = util.kB_kcal_mol * settings["ref_t"]  # kcal/mol
+        logging.info(f"       = {dG*kBT_kcal:6.2f} +- {dGe*kBT_kcal:4.2f} kcal/mol")
 
     finally:
         t1 = time.time() - t0

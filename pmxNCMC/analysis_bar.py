@@ -6,8 +6,7 @@ import argparse
 import numpy as np
 import pandas as pd
 import logging
-logging.getLogger("pymbar").setLevel(logging.ERROR) # Suppress logging in pymbar
-import pymbar
+
 
 
 def main():
@@ -74,10 +73,10 @@ def main():
     # unit conversion
     if args.unit.lower() in ["kj", "kj/mol"]:
         unit = "kJ/mol"
-        kB = 8.314462618e-3
+        kB = pmxNCMC.util.kB_kj_mol
     elif args.unit.lower() in ["kcal", "kcal/mol"]:
         unit = "kcal/mol"
-        kB = 1.987204259e-3
+        kB = pmxNCMC.util.kB_kcal_mol
     else:
         raise ValueError(f"Units should be kJ/mol or kcal/mol. {args.unit} is not supported")
     kBT = kB * temperature
@@ -88,16 +87,7 @@ def main():
     # BAR estimation
     work01 = df[df.columns[1]]  # 0->1, kJ/mol
     work10 = df[df.columns[2]]
-    try:
-        # pymbar 3
-        dG, dGe = pymbar.BAR(work01 / kBT_gmx, work10 / kBT_gmx)
-        logging.debug("pymbar 3 is used. >>> pymbar.BAR(w_f, w_r)")
-    except AttributeError as e:
-        # pymbar 4
-        res = pymbar.other_estimators.bar(work01 / kBT_gmx, work10 / kBT_gmx)
-        logging.debug("pymbar 4 is used. >>> pymbar.other_estimators.bar(w_f, w_r)")
-        dG = res["Delta_f"]
-        dGe = res["dDelta_f"]
+    dG, dGe = pmxNCMC.util.free_E_bar(work01/kBT_gmx, work10/kBT_gmx)
     print(f"DeltaG = {dG * kBT:.2f} +- {dGe * kBT:.2f} {unit}")
 
     # save work for pmx
