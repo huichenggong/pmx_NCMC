@@ -1,0 +1,45 @@
+integrator              = sd      ; stochastic leap-frog integrator
+dt                      = 0.002
+nsteps                  = 50000
+nstxtcout               = 0
+nstvout                 = 0
+nstfout                 = 0
+nstcalcenergy           = 50
+nstenergy               = 0
+nstlog                  = 0
+;
+cutoff-scheme           = Verlet
+nstlist                 = 50
+rlist                   = 1.0
+vdwtype                 = Cut-off
+vdw-modifier            = None
+DispCorr                = EnerPres
+rvdw                    = 1.0
+coulombtype             = PME
+rcoulomb                = 1.0
+;
+tc_grps                 = System
+tau_t                   = 1.0
+ref_t                   = 323
+;
+pcoupl                  = C-rescale
+pcoupltype              = isotropic 
+tau_p                   = 5.0
+compressibility         = 4.5e-5
+ref_p                   = 1.0   
+refcoord_scaling        = com
+;
+constraints             = h-bonds
+constraint_algorithm    = LINCS
+continuation            = yes
+;
+nstcomm                 = 100
+comm_mode               = linear
+comm_grps               = System
+
+; FREE ENERGY
+;----------------------------------------------------
+free-energy       = yes
+init-lambda       = 0     ; start from state A
+delta-lambda      = 0     ; stay in state A
+nstdhdl           = 0     ; no dhdl output
