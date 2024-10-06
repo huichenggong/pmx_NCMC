@@ -52,10 +52,17 @@ def run_eq_grompp(settings_dict, s0, s1):
     cpt0, gro0 = s0
     cpt1, gro1 = s1
     top_file = settings_dict["top"]
-    command_list = [
-        f"{settings_dict['GROMPP']} -f {mdp_eq0} -c {gro0} -t {cpt0} -p {top_file} -o {current_folder / '0' / 'eq.tpr'} > {current_folder / '0' / 'grompp_eq.log'} 2>&1",
-        f"{settings_dict['GROMPP']} -f {mdp_eq1} -c {gro1} -t {cpt1} -p {top_file} -o {current_folder / '1' / 'eq.tpr'} > {current_folder / '1' / 'grompp_eq.log'} 2>&1",
+    command_list_base = [
+        f"{settings_dict['GROMPP']} -f {mdp_eq0} -c {gro0} -t {cpt0} -p {top_file} -o {current_folder / '0' / 'eq.tpr'}",
+        f"{settings_dict['GROMPP']} -f {mdp_eq1} -c {gro1} -t {cpt1} -p {top_file} -o {current_folder / '1' / 'eq.tpr'}",
     ]
+    if settings_dict["min_output"]:
+        command_list = [cmd + " > /dev/null 2>&1" for cmd in command_list_base]
+    else:
+        command_list = [command_list_base[0] + f" > {current_folder / '0' / 'grompp_eq.log'} 2>&1",
+                        command_list_base[1] + f" > {current_folder / '1' / 'grompp_eq.log'} 2>&1"
+                        ]
+
     for cmd in command_list:
         logging.debug(cmd)
     processes = [subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) for cmd in command_list]
@@ -79,7 +86,11 @@ def run_eq_mdrun(settings_dict):
     current_folder = settings_dict["current_folder"]
     mdrun = settings_dict["MDRUN"]
     multi_dir = f"-multidir {current_folder}/0 {current_folder}/1"
-    command = f"{mdrun} -s eq.tpr {multi_dir} -deffnm eq > {current_folder / 'mdrun_eq.log'} 2>&1"
+    command = f"{mdrun} -s eq.tpr {multi_dir} -deffnm eq "
+    if settings_dict["min_output"]:
+        command += " > /dev/null 2>&1"
+    else:
+        command += f" > {current_folder / 'mdrun_eq.log'} 2>&1"
     p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=settings_dict["env"])
     p.wait()
     # make sure 2 eq.gro files are generated
@@ -103,10 +114,16 @@ def run_ti_grompp(settings_dict):
     gro1 = current_folder / "1" / "eq.gro"
     tpr1 = tmp_folder / "1" / "ti.tpr"
     top_file = settings_dict["top"]
-    command_list = [
-        f"{settings_dict['GROMPP']} -f {mdp_ti0} -c {gro0} -t {cpt0} -p {top_file} -o {tpr0} > {current_folder / '0' / 'grompp_ti.log'} 2>&1",
-        f"{settings_dict['GROMPP']} -f {mdp_ti1} -c {gro1} -t {cpt1} -p {top_file} -o {tpr1} > {current_folder / '1' / 'grompp_ti.log'} 2>&1",
+    command_list_base = [
+        f"{settings_dict['GROMPP']} -f {mdp_ti0} -c {gro0} -t {cpt0} -p {top_file} -o {tpr0} ",
+        f"{settings_dict['GROMPP']} -f {mdp_ti1} -c {gro1} -t {cpt1} -p {top_file} -o {tpr1} ",
     ]
+    if settings_dict["min_output"]:
+        command_list = [cmd + " > /dev/null 2>&1" for cmd in command_list_base]
+    else:
+        command_list = [command_list_base[0] + f" > {current_folder / '0' / 'grompp_ti.log'} 2>&1 ",
+                        command_list_base[1] + f" > {current_folder / '1' / 'grompp_ti.log'} 2>&1 ",
+                        ]
     for cmd in command_list:
         logging.debug(cmd)
     processes = [subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) for cmd in command_list]
@@ -128,7 +145,11 @@ def run_ti_mdrun(settings_dict):
     tmp_folder = settings_dict["tmp_folder"]
     current_folder = settings_dict["current_folder"]
     multi_dir = f"-multidir {tmp_folder}/0 {tmp_folder}/1"
-    command = f"{mdrun} -s ti.tpr {multi_dir} -deffnm ti > {current_folder / 'mdrun_ti.log'} 2>&1"
+    command = f"{mdrun} -s ti.tpr {multi_dir} -deffnm ti "
+    if settings_dict["min_output"]:
+        command += " > /dev/null 2>&1"
+    else:
+        command += f" > {current_folder / 'mdrun_ti.log'} 2>&1"
     p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=settings_dict["env"])
     p.wait()
 
@@ -221,50 +242,54 @@ def main():
                         metavar='topology',
                         type=str, help='Topology file',
                         default='topol.top')
-    parser.add_argument('-log',
+    parser.add_argument('-log', metavar=" ",
                         type=str, help='Log file',
                         default='md.log')
-    parser.add_argument('-csv',
-                        metavar='csv output',
+    parser.add_argument('-csv', metavar=" ",
                         type=str, help='CSV file for saving work values. Default : md.csv',
                         default='md.csv')
-    parser.add_argument('-mdp_folder',
+    parser.add_argument('-mdp_folder', metavar=" ",
                         type=str,
                         help='Folder that contains eq0.mdp, eq1.mdp, ti0.mdp, ti1.mdp. All 4 files are required. '
                              'File name should be exact.')
-    parser.add_argument('-folder_start',
+    parser.add_argument('-folder_start', metavar=" ",
                         type=str, help='Folder to start the simulation. Default : 000000',
                         default='000000')
-    parser.add_argument('-cycle',
+    parser.add_argument('-cycle', metavar=" ",
                         type=int, help='Number of cycles (work evaluation) to run. Default : 10',
                         default=10)
-    parser.add_argument('-maxh',
+    parser.add_argument('-maxh', metavar=" ",
                         type=float, help='Terminate after this time. It will only be checked at the start of a cycle. '
                                          'The actually running time can possibly exceed this time. Default : 23.5 h',
                         default=23.5)
-    parser.add_argument('-MDRUN', metavar="",
+    parser.add_argument('-MDRUN', metavar=" ",
                         type=str,
                         help='command for mdrun, we will use multidir, MPI is required. '
                              'Default : "mpirun -np 2 --bind-to none gmx_mpi mdrun"',
                         default='mpirun -np 2 --bind-to none gmx_mpi mdrun')
-    parser.add_argument('-GROMPP', metavar="",
+    parser.add_argument('-GROMPP', metavar=" ",
                         type=str, help='command for grompp, with additional flags. '
                                        'For example "gmx_threads_AVX_256 grompp -maxwarn 1" Default : "gmx grompp"',
                         default='gmx grompp')
-    parser.add_argument('-tmp_folder',
+    parser.add_argument('-tmp_folder', metavar=" ",
                         type=str,
                         help='Temporary folder. Point it to the local storage on the computing node to save IO. '
                              'You can also set this to /dev/shm if you have enough memory. '
                              'Default : auto determined by python tempfile', )
-    parser.add_argument('-re_try', help='Number of re-try if the simulation fails. Default : 3',
+    parser.add_argument('-re_try', metavar=" ",
                         type=int,
+                        help='Number of re-try if the simulation fails. Default : 3',
                         default=3)
     parser.add_argument('--debug',
                         action='store_true', help='Print debug information')
-    parser.add_argument('--format', metavar="log_format",
+    parser.add_argument('--format', metavar=" ",
                         type=str, help='Log format. Default : "%%(asctime)s - %%(levelname)s - %%(message)s" . '
                                        'If you want a clean output, use "%%(message)s". In debug run, this will be ignored.',
                         default='%(asctime)s - %(levelname)s - %(message)s')
+    parser.add_argument('--min_output',
+                        action='store_true',
+                        help='Minimal IO. If you are sure about what you are doing and you want the minimal output '
+                             'to save IO. This will redirect all gromacs stdout/stderr to /dev/null.')
 
     args = parser.parse_args()
     env = os.environ.copy()
@@ -282,7 +307,8 @@ def main():
                 "current_cycle": 0,
                 "base_path": Path.cwd(),
                 "re_try": args.re_try,
-                "env"   : env
+                "env"   : env,
+                "min_output" : args.min_output
                 }
     if settings["folder_start"].name == "000000":  # new start
         util.backup_if_exist_gmx(settings["log"])
