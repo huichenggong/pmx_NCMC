@@ -284,19 +284,18 @@ def main():
                 "re_try": args.re_try,
                 "env"   : env
                 }
-    if settings["log"].exists():
-        util.backup_if_exist(settings["log"])
+    if settings["folder_start"].name == "000000":  # new start
+        util.backup_if_exist_gmx(settings["log"])
     if args.debug:
         # set log to DEBUG
         logging.basicConfig(
-            filename=args.log, filemode='w',
+            filename=args.log, filemode='a',
             level=logging.DEBUG,
             format='%(asctime)s - %(levelname)s - %(message)s')
         logging.debug(f"ti.xvg and ti.tpr will be saved.")
     else:
-        # print(args.log, args.format)
         logging.basicConfig(
-            filename=args.log, filemode='w',
+            filename=args.log, filemode='a',
             level=logging.INFO,
             format=args.format)
 
@@ -337,8 +336,7 @@ def main():
                 logging.info(f"File {tpr} not found. Please prepare {settings['folder_start']/'0/eq.tpr'} and {settings['folder_start']/'1/eq.tpr'} using \"gmx grompp\"")
                 exit(1)
         for file_name in [settings["csv"]]:
-            if file_name.exists():
-                util.backup_if_exist(file_name)
+            util.backup_if_exist_gmx(file_name)
         with open(settings["csv"], "w") as f:
             f.writelines([f"Cycle,Work_01 (kJ/mol),Work_10 (kJ/mol),Acceptance_ratio,Accept_{settings['ref_t']}\n"])
     elif int(settings["folder_start"].name) < 0:

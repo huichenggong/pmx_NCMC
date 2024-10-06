@@ -161,3 +161,6 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
+test/2-pentene/mdrun/01-trans/rep_?
+test/2-pentene/mdrun/02-cis/rep_?
+test/2-pentene/mdrun/02-cis/rep_999/

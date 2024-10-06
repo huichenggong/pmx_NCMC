@@ -21,17 +21,19 @@ def integrate_work(ti_xvg):
     return simpson(dh_dl[:, 1], x=lam)
 
 
-def backup_if_exist(f_name):
+def backup_if_exist_gmx(f_name):
     """
     Do gromacs style backup. If md.xtc exist, backup it to #md.xtc.1#
-    given f_name file should exist
     """
-    for i in range(1,10000):
-        bak = f"#{f_name}.{i}#"
-        if not os.path.exists(bak):
-            shutil.move(f_name, bak)
-            return bak
-    raise Exception(f"Cannot backup {f_name}")
+    if os.path.exists(f_name):
+        for i in range(1,10000):
+            bak = f"#{f_name}.{i}#"
+            if not os.path.exists(bak):
+                shutil.move(f_name, bak)
+                return bak
+        raise Exception(f"Cannot backup {f_name}")
+    else:
+        return None
 
 def get_ref_T(mdp_file):
     """

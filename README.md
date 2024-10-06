@@ -67,6 +67,7 @@ Before you start a pmx_mdrun, you need to prepare the mdp files and the tpr file
 ```
 You can prepare 2 tpr files by:
 ```bash
+base=$PWD
 cd $base
 mkdir 000000
 cd 000000
@@ -75,23 +76,28 @@ cd $base/000000/0
 gmx grompp -f ../../mdp/eq0.mdp -c ../../eq/0/eq.gro -p ../../../../../topol.top -o eq
 cd $base/000000/1
 gmx grompp -f ../../mdp/eq1.mdp -c ../../eq/1/eq.gro -p ../../../../../topol.top -o eq
+cd $base
 ```
 You can use the following command to start and append a pmx_mdrun.
 ```bash
 ./run_1_eq.sh # prepare this replica
 pmx_mdrun -h
 pmx_mdrun \
+    -l md_0.log \
     -mdp_folder mdp/ -p ../../../topol.top -folder_start 000000 \
-    -cycle 20 \
+    -cycle 10 \
     -MDRUN "mpirun -np 2 --bind-to none gmx_mpi mdrun" \
     -GROMPP "gmx grompp" \
-    -maxh 5 # 20 is too little. You probably need 200 cycles to converge the delta G
+    --format "%(message)s" \
+    -maxh 5 # 10 is too little. You probably need 200 cycles to converge the delta G
 pmx_mdrun \
-    -mdp_folder mdp/ -p ../../../topol.top -folder_start 000019 \
-    -cycle 20 \
+    -l md_0.log \
+    -mdp_folder mdp/ -p ../../../topol.top -folder_start 000009 \
+    -cycle 10 \
     -MDRUN "mpirun -np 2 --bind-to none gmx_mpi mdrun" \
     -GROMPP "gmx grompp" \
-    -maxh 5 # Append 20 more cycles from 000019
+    --format "%(message)s" \
+    -maxh 5 # Append 10 more cycles from 000009
 ```
 
 ## 3. Theory
