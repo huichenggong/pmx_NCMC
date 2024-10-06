@@ -1,0 +1,29 @@
+
+[ defaults ]
+; nbfunc        comb-rule       gen-pairs       fudgeLJ fudgeQQ
+1               2               yes             0.5     0.8333
+
+#include "00-TOP/at_type.itp"
+
+; Include 2-pentene
+#include "00-TOP/mol-hybrid.itp"
+
+; Include water topology
+#include "./amber14sb_parmbsc1.ff/tip3p.itp"
+
+#ifdef POSRES_WATER
+; Position restraint for each water oxygen
+[ position_restraints ]
+;  i funct       fcx        fcy        fcz
+   1    1       1000       1000       1000
+#endif
+
+
+[ system ]
+; Name
+pentene in water
+
+[ molecules ]
+; Compound        #mols
+MOL                 1
+SOL               755
