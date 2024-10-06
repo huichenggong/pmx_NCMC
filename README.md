@@ -22,7 +22,40 @@ mamba remove -n pmx_NCMC --all
 
 
 ## 2. Example
-Working on it.
+```bash
+cd test/2-pentene/
+```
+In stateA, it's a normal pentene. In stateB, the dihedral potential around 
+the double bond is removed. We can either start from trans or cis.
+```bash
+mdrun/01-trans/em.gro
+mdrun/02-cis/em.gro
+```
+Eventrually, the free energy difference between stateA and stateB should be the same, 
+regardless of the starting conformation. 
+```bash
+cd mdrun/01-trans/
+./run_10-1-prepare.sh # prepare 10 replicas
+./run_10-2-submit.sh  # submit 10 replicas to the cluster
+```
+In case you don't want to submit them to the cluster.
+```bash
+cd mdrun/01-trans/rep_999
+./run_1_eq.sh # prepare this replica
+pmx_mdrun -h
+pmx_mdrun \
+    -mdp_folder mdp/ -p ../../../topol.top -folder_start 000000 \
+    -cycle 20 \
+    -MDRUN "mpirun -np 2 --bind-to none gmx_mpi mdrun" \
+    -GROMPP "gmx grompp" \
+    -maxh 5 # 20 is too little. You probably need 200 cycles to converge the delta G
+pmx_mdrun \
+    -mdp_folder mdp/ -p ../../../topol.top -folder_start 000019 \
+    -cycle 20 \
+    -MDRUN "mpirun -np 2 --bind-to none gmx_mpi mdrun" \
+    -GROMPP "gmx grompp" \
+    -maxh 5 # Append 20 more cycles from 000019
+```
 
 ## 3. Theory
 ![Theory](./Fig/theory.jpg)
