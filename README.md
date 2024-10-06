@@ -99,6 +99,11 @@ pmx_mdrun \
     --format "%(message)s" \
     -maxh 5 # Append 10 more cycles from 000009
 ```
+Use BAR (bennett acceptance ratio) to estimate the free energy difference.
+```bash
+analysis_bar -csv md.csv -oA integA.dat -oB integB.dat --unit kcal
+# TODO: time correlation and sub-sampling
+```
 
 ## 3. Theory
 ![Theory](./Fig/theory.jpg)
