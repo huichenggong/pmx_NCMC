@@ -23,13 +23,11 @@ def main():
                         metavar='temperature',
                         type=float, help='Temperature in K, If not given, try to read from the heading of the csv')
     parser.add_argument("-oA",
-                        metavar='work output 0->1',
-                        type=str, help='File.dat where to save all the work value (for pmx). The unit is kJ/mol. '
-                                       'Default is "integA.dat"')
+                        metavar='integA.dat',
+                        type=str, help='work output A->B. File to save all the work value (for pmx). The unis is kJ/mol. ')
     parser.add_argument("-oB",
-                        metavar='work output 1->0',
-                        type=str, help='File.dat where to save all the work value (for pmx). The unis is kJ/mol. '
-                                       'Default is "integB.dat"')
+                        metavar='integB.dat',
+                        type=str, help='work output B->A. File to save all the work value (for pmx). The unis is kJ/mol. ')
     parser.add_argument("--unit",
                         metavar='unit',
                         type=str, help='Unit for the print out and plotting. Default is "kJ/mol"',
@@ -40,7 +38,8 @@ def main():
                                  "kcal/mol", "kCal/mol", "Kcal/mol", "KCal/mol"])
     parser.add_argument("-w",
                         metavar='plot',
-                        type=str, help='Work distribution plot. Default is "wplot.png"')
+                        type=str, help='Work distribution plot. Default is "wplot.png"',
+                        default="wplot.png")
 
     args = parser.parse_args()
 
