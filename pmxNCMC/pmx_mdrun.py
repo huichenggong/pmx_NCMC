@@ -331,10 +331,10 @@ def main():
     if settings["folder_start"].name == "000000":
         logging.info("New simulation starting from cycle 0")
         settings["current_cycle"] = 0
-        # make cure 2 tpr exist
+        # make sure 2 tpr exist
         for tpr in [settings["folder_start"]/"0/eq.tpr", settings["folder_start"]/"1/eq.tpr"]:
             if not tpr.exists():
-                logging.info(f"File {tpr} not found. Please prepare {settings['folder_start']/'0/eq.tpr'} and {settings['folder_start']/'1/eq.tpr'} using grompp")
+                logging.info(f"File {tpr} not found. Please prepare {settings['folder_start']/'0/eq.tpr'} and {settings['folder_start']/'1/eq.tpr'} using \"gmx grompp\"")
                 exit(1)
         for file_name in [settings["csv"]]:
             if file_name.exists():
