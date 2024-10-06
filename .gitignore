@@ -161,6 +161,12 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
+# test output
 test/2-pentene/mdrun/01-trans/rep_?
 test/2-pentene/mdrun/02-cis/rep_?
 test/2-pentene/mdrun/02-cis/rep_999/
+test/2-pentene/mdrun/01-trans/rep_999/0000??/
+test/2-pentene/mdrun/01-trans/rep_999/eq/
+test/2-pentene/mdrun/01-trans/rep_999/mdout.mdp
+test/2-pentene/mdrun/01-trans/rep_999/md.csv
+
