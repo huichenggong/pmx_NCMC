@@ -38,9 +38,46 @@ cd mdrun/01-trans/
 ./run_10-1-prepare.sh # prepare 10 replicas
 ./run_10-2-submit.sh  # submit 10 replicas to the cluster
 ```
-In case you don't want to submit them to the cluster.
+In case you don't want to submit them to the cluster. You can also test it like this.  
 ```bash
+# prepare 1 replica with 50ps of eq
 cd mdrun/01-trans/rep_999
+base=$PWD
+for i in 0 1 # 0 and 1 correspond to stateA and stateB
+do
+    cd $base/eq/$i
+    gmx grompp -f eq.mdp -c ../../../em.gro -p ../../../../../topol.top  -o eq
+done
+cd $base
+mpirun -np 2 --bind-to none gmx_mpi mdrun -v -s eq.tpr -deffnm eq -multidir eq/? 
+```
+Before you start a pmx_mdrun, you need to prepare the mdp files and the tpr file for the first eq. They are :  
+```bash
+├── 000000
+│   ├── 0
+│   │   └── eq.tpr
+│   └── 1
+│       └── eq.tpr
+└── mdp
+    ├── eq0.mdp # eq run for stateA
+    ├── eq1.mdp # eq run for stateB
+    ├── ti0.mdp # ti run for A to B
+    └── ti1.mdp # ti run for B to A
+# eq+ti would be 1 cycle
+```
+You can prepare 2 tpr files by:
+```bash
+cd $base
+mkdir 000000
+cd 000000
+mkdir 0 1
+cd $base/000000/0
+gmx grompp -f ../../mdp/eq0.mdp -c ../../eq/0/eq.gro -p ../../../../../topol.top -o eq
+cd $base/000000/1
+gmx grompp -f ../../mdp/eq1.mdp -c ../../eq/1/eq.gro -p ../../../../../topol.top -o eq
+```
+You can use the following command to start and append a pmx_mdrun.
+```bash
 ./run_1_eq.sh # prepare this replica
 pmx_mdrun -h
 pmx_mdrun \
