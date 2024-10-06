@@ -1,4 +1,4 @@
 
-__version__ = '0.2.2_dev'
+__version__ = '0.2.2'
 
 from .util import util
