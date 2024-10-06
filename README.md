@@ -1,5 +1,5 @@
 # pmx_NCMC
-Add replica exchange [(ref1)](#reference) to pmx free energy calculation. The more general form of
+Add replica exchange [(ref1)](#4-reference) to pmx free energy calculation. The more general form of
 replica exchange is nonequilibrium candidate Monte Carlo (NCMC). This python 
 package is an IO based implementation of replica exchange for pmx-style free 
 energy calculation.
