@@ -15,6 +15,10 @@ mamba activate  pmx_NCMC  # mambda works the same as conda
 git clone https://github.com/huichenggong/pmx_NCMC.git
 pip install .
 ```
+### 1.X Remove environment
+```bash
+mamba remove -n pmx_NCMC --all
+```
 
 
 ## 2. Example
