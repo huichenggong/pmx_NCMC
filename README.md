@@ -104,6 +104,9 @@ Use BAR (bennett acceptance ratio) to estimate the free energy difference.
 analysis_bar -csv md.csv -oA integA.dat -oB integB.dat --unit kcal
 # TODO: time correlation and sub-sampling
 ```
+Trans and cis converge to the same value as expected.  
+![convergence](./Fig/convergence.png)
+
 
 ## 3. Theory
 ![Theory](./Fig/theory.jpg)
