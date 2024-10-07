@@ -5,17 +5,16 @@ import os
 import shutil
 from pathlib import Path
 import time
+from functools import wraps
 import logging
 import tempfile
 
 import numpy as np
 import pandas as pd
-from scipy import integrate
 
 import pmxNCMC
 from pmxNCMC import util
 import subprocess
-from concurrent.futures import ThreadPoolExecutor
 
 
 def prepare_scratch_folder(tmp_folder_path):
@@ -40,6 +39,26 @@ def prepare_current_folder(current_folder_path):
         if not rep_dir.exists():
             rep_dir.mkdir(parents=True)
 
+fun_exe_times = {
+    'run_eq_grompp': [],
+    'run_eq_mdrun': [],
+    'run_ti_grompp': [],
+    'run_ti_mdrun': []
+}
+def time_function(func_name):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            start_time = time.perf_counter()
+            result = func(*args, **kwargs)
+            end_time = time.perf_counter()
+            duration = end_time - start_time
+            fun_exe_times[func_name].append(duration)
+            return result
+        return wrapper
+    return decorator
+
+@time_function('run_eq_grompp')
 def run_eq_grompp(settings_dict, s0, s1):
     """
     Run eq simulation
@@ -76,6 +95,7 @@ def run_eq_grompp(settings_dict, s0, s1):
             logging.info(f"File {tpr} not found")
             raise RuntimeError(f"File {tpr} not found")
 
+@time_function('run_eq_mdrun')
 def run_eq_mdrun(settings_dict):
     """
     Run eq simulation.
@@ -98,6 +118,7 @@ def run_eq_mdrun(settings_dict):
         if not f.exists():
             raise RuntimeError(f"After eq_mdrun, {f} was not found.")
 
+@time_function('run_ti_grompp')
 def run_ti_grompp(settings_dict):
     """
     grompp for TI simulation, 0->1 starts from 0 (cpt, gro), 1->0 starts from 1 (cpt, gro)
@@ -135,6 +156,7 @@ def run_ti_grompp(settings_dict):
         if not tpr.exists():
             raise RuntimeError(f"After ti_grompp {tpr} was not found.")
 
+@time_function('run_ti_mdrun')
 def run_ti_mdrun(settings_dict):
     """
     Run TI simulation, return work value in kJ/mol
@@ -409,7 +431,7 @@ def main():
     kBT = util.kB_kj_mol * settings["ref_t"]  # kJ * K/mol
     command_line = ""
     for word in sys.argv:
-        if " " in word:
+        if " " in word or "%" in word:
             command_line += f'"{word}" '
         else:
             command_line += word + " "
@@ -475,6 +497,7 @@ def main():
             t_tock = time.time()
             logging_ave_time_cycle((t_tock - t0) / (cycle + 1), t_tock - t_tick)
             t_tick = t_tock
+
         df = pd.read_csv(settings["csv"])
         logging.info(f"Read {settings['csv']} and estimate free energy difference using {len(df)} cycles.")
         work01 = df[df.columns[1]]  # 0->1, kJ/mol
@@ -483,6 +506,10 @@ def main():
         logging.info(f"DeltaG = {dG*kBT:6.2f} +- {dGe*kBT:4.2f} kJ/mol")
         kBT_kcal = util.kB_kcal_mol * settings["ref_t"]  # kcal/mol
         logging.info(f"       = {dG*kBT_kcal:6.2f} +- {dGe*kBT_kcal:4.2f} kcal/mol")
+        t_tock = time.time()
+        for func_name, times in fun_exe_times.items():
+            avg_time = np.mean(times)
+            logging.info(f"Average time for {func_name:14s}: {avg_time:5.2f} s, {sum(times)/(t_tock-t0)*100:5.2f}%")
 
     finally:
         t1 = time.time() - t0
