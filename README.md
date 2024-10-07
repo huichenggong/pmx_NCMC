@@ -102,10 +102,11 @@ pmx_mdrun \
 Use BAR (bennett acceptance ratio) to estimate the free energy difference.
 ```bash
 analysis_bar -csv md.csv -oA integA.dat -oB integB.dat --unit kcal
+# save work to integA.dat and integB.dat for pmx analyse
 # TODO: time correlation and sub-sampling
 ```
 Trans and cis converge to the same value as expected.  
-![convergence](./Fig/convergence.png)
+![convergence](./test/2-pentene/mdrun/convergence.jpeg)
 
 
 ## 3. Theory
