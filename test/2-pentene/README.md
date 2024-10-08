@@ -1,17 +1,17 @@
-# 2-pentene
+# 2-pentene  
 This is a test case for `pmx_mdrun`. In this test case. State A is a 2-pentene, and state B 
 has all the dihedral potential removed around the double bond.
 
-## 1. Topology
+## 1. Topology  
 Preparation of the top is documented in `00-TOP/README.md`. It's a 2-pentene in gaff prepared by antechamber and acpype.  
 
-## 2. mdrun
+## 2. mdrun  
 We can start the simulation from either trans or cis.
 ```bash
 mdrun/01-trans/
 mdrun/02-cis/
 ```
-### 2.1 Trans starts (with given bash script)
+### 2.1 Trans starts (with given bash script)  
 ```bash
 cd mdrun/01-trans/
 tree -L 1
@@ -25,20 +25,20 @@ tree -L 1
 `run_10-1-prepare.sh` copy the template to `rep_0`, `rep_1`, ... , and run a initial equlibriation.
 `run_10-2-submit.sh` submit all replicas to the cluster with given slurm template.
 
-### 2.2 Cis starts
+### 2.2 Cis starts  
 ```bash
 cd mdrun/02-cis/
 cp ../01-trans/rep_999 ./ -r
 ```
 
-### 2.3 run pmx_mdrun (step by step)
+### 2.3 run pmx_mdrun (step by step)  
 1. Prepare 1 replica
 ```bash
 cd mdrun/01-trans/
 cp rep_999 rep_0 -r
 ```
   
-2. Pre-equilibrium
+2. Pre-equilibrium  
 ```bash
 base=$PWD
 
@@ -60,13 +60,13 @@ gmx grompp -f ../../mdp/eq1.mdp -c ../../eq/1/eq.gro -p ../../../../../topol.top
 cd $base
 ```
 
-3. Now we has everything for `pmx_mdrun`
+3. Now we has everything for `pmx_mdrun`  
 ```bash
 ├── 000000         # cycle 0, 1 eq + 1 ti would be 1 cycle
 │   ├── 0
-│   │   └── eq.tpr
+│   │   └── eq.tpr # 100 ps equilibrium MD in state A
 │   └── 1
-│       └── eq.tpr
+│       └── eq.tpr # 100 ps equilibrium MD in state B
 └── mdp
     ├── eq0.mdp    # eq run for stateA
     ├── eq1.mdp    # eq run for stateB
@@ -74,7 +74,7 @@ cd $base
     └── ti1.mdp    # ti run for B to A
 ```
 
-4. Start a new mdrun
+4. Start a new mdrun  
 ```bash
 pmx_mdrun \
     -l md_0.log \
@@ -84,7 +84,7 @@ pmx_mdrun \
     -GROMPP "gmx grompp"
 ```
 
-5. Append more cycle
+5. Append more cycle 
 `md_0.log` and `md.csv` will be append.
 ```bash
 pmx_mdrun \
@@ -101,7 +101,7 @@ DeltaG = -20.31 +- 0.30 kJ/mol
        =  -4.85 +- 0.07 kcal/mol
 ```
 
-6. Free energy estimation
+6. Free energy estimation  
 ```bash
 analysis_bar -csv md.csv --unit kcal
 ```
@@ -115,7 +115,7 @@ analysis_bar -csv md.csv -oA integA.dat -oB integB.dat --unit kcal
 pmx analyse -iA integA.dat -iB integB.dat
 ```
 
-## 3. Further analysis
+## 3. Further analysis  
 ![convergence_check](./mdrun/convergence.jpeg)
 Without replica exchange, trans and cis would not converge to the same value.  
 The detail analysis can be found in `mdrun/convergence.ipynb`
