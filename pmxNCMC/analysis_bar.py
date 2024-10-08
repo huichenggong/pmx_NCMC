@@ -39,7 +39,7 @@ def main():
     parser.add_argument("-w",
                         metavar='plot',
                         type=str, help='Work distribution plot. Default is "wplot.png"',
-                        default="wplot.png")
+                        default="Wplot.png")
 
     args = parser.parse_args()
 
