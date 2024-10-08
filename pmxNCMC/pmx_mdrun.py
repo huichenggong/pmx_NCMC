@@ -17,28 +17,6 @@ from pmxNCMC import util
 import subprocess
 
 
-def prepare_scratch_folder(tmp_folder_path):
-    if not tmp_folder_path.exists():
-        tmp_folder_path.mkdir()
-    for i in range(2):
-        tmp_ = tmp_folder_path / str(i)
-        if not tmp_.exists():
-            tmp_.mkdir()
-    # make sure the folder is empty
-    for i in range(2):
-        tmp_ = tmp_folder_path / str(i)
-        for f in tmp_.iterdir():
-            if f.is_file():
-                f.unlink()
-            else:
-                shutil.rmtree(f)
-
-def prepare_current_folder(current_folder_path):
-    for i in range(2):
-        rep_dir = current_folder_path / str(i)
-        if not rep_dir.exists():
-            rep_dir.mkdir(parents=True)
-
 fun_exe_times = {
     'run_eq_grompp': [],
     'run_eq_mdrun': [],
@@ -58,185 +36,6 @@ def time_function(func_name):
         return wrapper
     return decorator
 
-@time_function('run_eq_grompp')
-def run_eq_grompp(settings_dict, s0, s1):
-    """
-    Run eq simulation
-    gmx grompp
-    mpirun -np 2 gmx_mpi mdrun -multidir
-    """
-    mdp_eq0 = settings_dict["mdp_folder"] / "eq0.mdp"
-    mdp_eq1 = settings_dict["mdp_folder"] / "eq1.mdp"
-    current_folder = settings_dict["current_folder"]
-    cpt0, gro0 = s0
-    cpt1, gro1 = s1
-    top_file = settings_dict["top"]
-    command_list_base = [
-        f"{settings_dict['GROMPP']} -f {mdp_eq0} -c {gro0} -t {cpt0} -p {top_file} -o {current_folder / '0' / 'eq.tpr'}",
-        f"{settings_dict['GROMPP']} -f {mdp_eq1} -c {gro1} -t {cpt1} -p {top_file} -o {current_folder / '1' / 'eq.tpr'}",
-    ]
-    if settings_dict["min_output"]:
-        command_list = [cmd + " > /dev/null 2>&1" for cmd in command_list_base]
-    else:
-        command_list = [command_list_base[0] + f" > {current_folder / '0' / 'grompp_eq.log'} 2>&1",
-                        command_list_base[1] + f" > {current_folder / '1' / 'grompp_eq.log'} 2>&1"
-                        ]
-
-    for cmd in command_list:
-        logging.debug(cmd)
-    processes = [subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) for cmd in command_list]
-
-    # Collect the results as the commands finish
-    for p in processes:
-        p.wait()
-    # make sure the tpr files are generated
-    for tpr in [current_folder / '0' / 'eq.tpr', current_folder / '1' / 'eq.tpr']:
-        if not tpr.exists():
-            logging.info(f"File {tpr} not found")
-            raise RuntimeError(f"File {tpr} not found")
-
-@time_function('run_eq_mdrun')
-def run_eq_mdrun(settings_dict):
-    """
-    Run eq simulation.
-    Assume all tpr file has been generated. current_folder/0/eq.tpr, current_folder/1/eq.tpr
-    :param settings_dict:
-    :return: None
-    """
-    current_folder = settings_dict["current_folder"]
-    mdrun = settings_dict["MDRUN"]
-    multi_dir = f"-multidir {current_folder}/0 {current_folder}/1"
-    command = f"{mdrun} -s eq.tpr {multi_dir} -deffnm eq "
-    if settings_dict["min_output"]:
-        command += " > /dev/null 2>&1"
-    else:
-        command += f" > {current_folder / 'mdrun_eq.log'} 2>&1"
-    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=settings_dict["env"])
-    p.wait()
-    # make sure 2 eq.gro files are generated
-    for f in [current_folder / "0" / "eq.gro", current_folder / "1" / "eq.gro"]:
-        if not f.exists():
-            raise RuntimeError(f"After eq_mdrun, {f} was not found.")
-
-@time_function('run_ti_grompp')
-def run_ti_grompp(settings_dict):
-    """
-    grompp for TI simulation, 0->1 starts from 0 (cpt, gro), 1->0 starts from 1 (cpt, gro)
-    :return: None
-    """
-    mdp_ti0 = settings_dict["mdp_folder"] / "ti0.mdp"
-    mdp_ti1 = settings_dict["mdp_folder"] / "ti1.mdp"
-    current_folder = settings_dict["current_folder"]
-    tmp_folder = settings_dict["tmp_folder"]
-    cpt0 = current_folder / "0" / "eq.cpt"
-    gro0 = current_folder / "0" / "eq.gro"
-    tpr0 = tmp_folder / "0" / "ti.tpr"
-    cpt1 = current_folder / "1" / "eq.cpt"
-    gro1 = current_folder / "1" / "eq.gro"
-    tpr1 = tmp_folder / "1" / "ti.tpr"
-    top_file = settings_dict["top"]
-    command_list_base = [
-        f"{settings_dict['GROMPP']} -f {mdp_ti0} -c {gro0} -t {cpt0} -p {top_file} -o {tpr0} ",
-        f"{settings_dict['GROMPP']} -f {mdp_ti1} -c {gro1} -t {cpt1} -p {top_file} -o {tpr1} ",
-    ]
-    if settings_dict["min_output"]:
-        command_list = [cmd + " > /dev/null 2>&1" for cmd in command_list_base]
-    else:
-        command_list = [command_list_base[0] + f" > {current_folder / '0' / 'grompp_ti.log'} 2>&1 ",
-                        command_list_base[1] + f" > {current_folder / '1' / 'grompp_ti.log'} 2>&1 ",
-                        ]
-    for cmd in command_list:
-        logging.debug(cmd)
-    processes = [subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) for cmd in command_list]
-    # Collect the results as the commands finish
-    for p in processes:
-        p.wait()
-    # make sure the tpr files are generated
-    for tpr in [tpr0, tpr1]:
-        if not tpr.exists():
-            raise RuntimeError(f"After ti_grompp {tpr} was not found.")
-
-@time_function('run_ti_mdrun')
-def run_ti_mdrun(settings_dict):
-    """
-    Run TI simulation, return work value in kJ/mol
-    :param settings_dict:
-    :return: work01, work10
-    """
-    mdrun = settings_dict["MDRUN"]
-    tmp_folder = settings_dict["tmp_folder"]
-    current_folder = settings_dict["current_folder"]
-    multi_dir = f"-multidir {tmp_folder}/0 {tmp_folder}/1"
-    command = f"{mdrun} -s ti.tpr {multi_dir} -deffnm ti "
-    if settings_dict["min_output"]:
-        command += " > /dev/null 2>&1"
-    else:
-        command += f" > {current_folder / 'mdrun_ti.log'} 2>&1"
-    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=settings_dict["env"])
-    p.wait()
-
-    # make sure 2 ti.gro files are generated
-    for f in [tmp_folder / "0" / "ti.gro", tmp_folder / "1" / "ti.gro"]:
-        if not f.exists():
-            raise RuntimeError(f"After ti_mdrun, {f} not found.")
-
-    # integrate. get work value. The work that external force does on the system. <0 means system releases energy
-    work01 =  util.integrate_work(tmp_folder / "0" / "ti.xvg")
-    work10 = -util.integrate_work(tmp_folder / "1" / "ti.xvg")
-
-    # save ti.gro and ti.cpt
-    for i in range(2):
-        tmp_folder = settings_dict["tmp_folder"] / str(i)
-        rep_folder = settings_dict["current_folder"] / str(i)
-        for f in ["ti.gro", "ti.cpt"]:
-            shutil.copy(tmp_folder / f, rep_folder / f)
-    # if dry_run, also save ti.xvg ti.tpr
-    if settings_dict["DEBUG"]:
-        for i in range(2):
-            tmp_folder = settings_dict["tmp_folder"] / str(i)
-            rep_folder = settings_dict["current_folder"] / str(i)
-            for f in ["ti.xvg", "ti.tpr"]:
-                shutil.copy(tmp_folder / f, rep_folder / f)
-    # clean up, except ti.gro, ti.cpt
-    for f in [settings_dict["tmp_folder"]/"0", settings_dict["tmp_folder"]/"1"]:
-        for f2 in f.iterdir():
-            if f2.is_file():
-                if f2.name not in ["ti.gro", "ti.cpt"]:
-                    logging.debug(f"Remove file {f2}")
-                    f2.unlink()
-            else:
-                shutil.rmtree(f2)
-                logging.debug(f"Remove folder {f2}")
-    return work01, work10
-
-def swap_check(w01, w10, kBT, settings_dict):
-    """
-    :param w01: work 0->1 in kJ/mol
-    :param w10: work 1->0 in kJ/mol
-    :param kBT: kJ/mol
-    :param settings_dict:
-    Work is defined as the work that external force does on the system. <0 means system releases energy
-    :return: swap_flag, csv_line, s0, s1
-    """
-    p_accept = np.exp(-(w01 + w10) / kBT)
-    csv_line = f"{settings_dict['current_cycle']:5d},{w01:16.12},{w10:16.12},{min(1, p_accept):16.3f},"
-    inf_line = f"Cycle {settings_dict['current_cycle']}, {w01:9.3f} kJ/mol, {w10:9.3f} kJ/mol, {min(1, p_accept):6.3f},"
-    current_folder = settings_dict["current_folder"]
-    tmp_folder = settings_dict["tmp_folder"]
-    swap_flag = np.random.rand() < p_accept
-    if swap_flag:
-        csv_line += "A\n"
-        inf_line += " Accept"
-        s0 = tmp_folder / "1/ti.cpt", tmp_folder / "1/ti.gro"
-        s1 = tmp_folder / "0/ti.cpt", tmp_folder / "0/ti.gro"
-    else:
-        csv_line += "R\n"
-        inf_line += " Reject"
-        s0 = current_folder / "0/eq.cpt", current_folder / "0/eq.gro"
-        s1 = current_folder / "1/eq.cpt", current_folder / "1/eq.gro"
-    logging.info(inf_line)
-    logging.debug(f"In the next cycle: 0 starts from {s0[0]} {s0[1]}, and 1 starts from {s1[0]} {s1[1]}")
-    return swap_flag, csv_line, s0, s1
 
 def logging_ave_time_cycle(ave_time_cycle, time_cycle):
     """
@@ -253,6 +52,397 @@ def logging_ave_time_cycle(ave_time_cycle, time_cycle):
     else:
         ave_time_cycle_str = f"{ave_time_cycle:.2f} s"
     logging.info(f"Time of this cycle : {time_cycle:.2f} s. Average time per cycle: {ave_time_cycle_str}")
+
+class PMX_MDRUN_RE:
+    def __init__(self, top, csv, mdp_folder, folder_start, MDRUN, GROMPP, tmp_folder, env, min_output,
+                 debug=False):
+        """
+        :param top: pathlib.Path, gromacs topology file
+        :param csv: pathlib.Path, csv file to save work values
+        :param mdp_folder: pathlib.Path, folder that contains eq0.mdp, eq1.mdp, ti0.mdp, ti1.mdp
+        :param folder_start: pathlib.Path, folder to start the simulation.
+        :param MDRUN: str, command for mdrun, we will use multidir, MPI is required.
+            For example "mpirun -np 2 gmx_mpi mdrun"
+        :param GROMPP: str, command for grompp, with additional flags.
+            For example "gmx_threads_AVX_256 grompp -maxwarn 1"
+        :param tmp_folder: pathlib.Path, temporary folder where the TI job will run.
+        :param base_path: pathlib.Path, base working directory
+        :param env: dict, environment variables
+        :param min_output: bool, set to True will redirect all gromacs stdout/stderr to /dev/null
+        :param debug: bool, set to True will save ti files
+
+        restart a simulation from 000000 is not possible. It will be identified as a new start.
+        """
+        self.top           = top
+        self.csv           = csv
+        self.mdp_folder    = mdp_folder
+        self.folder_start  = folder_start
+        self.MDRUN         = MDRUN
+        self.GROMPP        = GROMPP
+        self.tmp_folder    = tmp_folder
+        self.env           = env
+        self.min_output    = min_output
+        self.debug         = debug
+
+        self.safe_flag = False
+        self.s0 = [None, None] # starting cpt/gro files for the next eq in lambda 0
+        self.s1 = [None, None] # starting cpt/gro files for the next eq in lambda 1
+
+        self.current_cycle = None
+        self.ref_t = None
+        self.kBT = None
+
+    def set_current_folder(self):
+        """
+        set self.current_folder based on self.current_cycle
+        At the moment 06d
+        This will not create the folder.
+        :return: None
+        """
+        self.current_folder = Path(f"{self.current_cycle:06d}")
+
+    def prepare_current_folder(self):
+        """
+        prepare the current_folder. Make sure 0 and 1 folders exist.
+        :return:
+        """
+        (self.current_folder / "0").mkdir(parents=True, exist_ok=True)
+        (self.current_folder / "1").mkdir(parents=True, exist_ok=True)
+
+    def prepare_scratch_folder(self):
+        """
+        prepare the scratch folder. Make sure 0 and 1 folders exist.
+        :return:
+        """
+        (self.tmp_folder / "0").mkdir(parents=True, exist_ok=True)
+        (self.tmp_folder / "1").mkdir(parents=True, exist_ok=True)
+        # make sure both folders are empty
+        for i in range(2):
+            tmp_ = self.tmp_folder / str(i)
+            for f in tmp_.iterdir():
+                if f.is_file():
+                    f.unlink()
+                else:
+                    shutil.rmtree(f)
+
+    def safety_check(self):
+        """
+        Temperature should be the same in all 4 mdp files.
+        nstep * delta_lambda should be 1 in ti0.mdp, -1 in ti1.mdp
+        init_lambda should be 0, 1 in ti0.mdp, ti1.mdp
+        Set self.current_cycle based on the self.folder_start
+        If it's a new start,
+            csv file should not exist.
+            tpr files should exist.
+        If it's a restart,
+            csv file should exist. The last line of csv should be consistent with the last cycle (self.folder_start).
+            cpt, gro files should exist.
+        :return: bool, True if all checks pass
+        """
+        mdp_list = ["eq0.mdp", "eq1.mdp", "ti0.mdp", "ti1.mdp"]
+
+        # all mdp files should exist
+        for mdp in mdp_list:
+            if not (self.mdp_folder/mdp).exists():
+                logging.info(f"File {self.mdp_folder/mdp} not found")
+                return False
+
+        # temperature should be the same
+        ref_t_list = [util.get_ref_T(self.mdp_folder / mdp_name) for mdp_name in mdp_list]
+        if not np.allclose(ref_t_list, ref_t_list[0], atol=1e-5):
+            logging.info(f"Temperature is not the same in all 4 mdp files: {ref_t_list}")
+            return False
+        self.ref_t = ref_t_list[0]
+        self.kBT = util.kB_kj_mol * self.ref_t
+
+        # TI should be 0->1, 1->0
+        if not util.mdp_check_TI(self.mdp_folder / "ti0.mdp", 0):
+            return False
+        if not util.mdp_check_TI(self.mdp_folder / "ti1.mdp", 1):
+            return False
+
+        self.current_cycle = int(self.folder_start.name)
+        if self.folder_start.name == "000000": # new start
+            for tpr in [self.folder_start / '0/eq.tpr', self.folder_start / '1/eq.tpr']:
+                if not tpr.exists():
+                    logging.info(f"File {tpr} not found")
+                    return False
+            if self.csv.is_file():
+                name_new = util.backup_if_exist_gmx(self.csv)
+                logging.info(f"File {self.csv} exists. Backup to {name_new}")
+            with open(self.csv, 'w') as f:
+                f.writelines([f"Cycle,Work_01 (kJ/mol),Work_10 (kJ/mol),Acceptance_ratio,Accept_{self.ref_t}\n"])
+            self.current_folder = self.folder_start
+
+        else: # append run
+            if not self.csv.is_file():
+                logging.info(f"File {self.csv} not found. Cannot restart.")
+                return False
+            with open(self.csv) as f:
+                lines = f.readlines()
+            if len(lines) <= 1:
+                logging.info(f"File {self.csv} is empty. Cannot restart")
+                return False
+            l0 = lines[0].split("_")
+            if lines[0][:64] != "Cycle,Work_01 (kJ/mol),Work_10 (kJ/mol),Acceptance_ratio,Accept_":
+                logging.info(f"Heading of {self.csv} is incorrect. Cannot restart")
+                return False
+            if not np.allclose(float(l0[-1]), self.ref_t):
+                logging.info(f"Temperature in the heading of {self.csv} is not the same as in mdp files.")
+                return False
+            last_cycle = int(lines[-1].split(",")[0])
+            if last_cycle != self.current_cycle:
+                logging.info(f"Last cycle in {self.csv} is {last_cycle}. But the given folder is {self.folder_start.name}")
+                return False
+            for i in range(2):
+                for fname in ["eq.cpt", "eq.gro"]:
+                    f = self.folder_start / str(i) / fname
+                    if not f.is_file():
+                        logging.info(f"File {f} not found")
+                        return False
+            if lines[-1].split(",")[-1] == "A\n":
+                self.s0 = [self.folder_start / "1" / "ti.cpt", self.folder_start / "1" / "ti.gro"]
+                self.s1 = [self.folder_start / "0" / "ti.cpt", self.folder_start / "0" / "ti.gro"]
+                for f in self.s0 + self.s1:
+                    if not f.exists():
+                        logging.info(f"File {f} not found")
+                        return False
+            elif lines[-1].split(",")[-1] == "R\n":
+                self.s0 = [self.folder_start / "0" / "eq.cpt", self.folder_start / "0" / "eq.gro"]
+                self.s1 = [self.folder_start / "1" / "eq.cpt", self.folder_start / "1" / "eq.gro"]
+            else:
+                logging.info(f"Cannot interpreter the last line of {self.csv}")
+                logging.info(lines[-1])
+                return False
+            self.current_cycle += 1
+            self.set_current_folder()
+
+        self.safe_flag = True
+        self.prepare_scratch_folder()
+        return True
+
+    def log_sim_settings(self):
+        """
+        Log the simulation settings
+        :return: None
+        """
+        logging.info(f"topology   : {self.top}")
+        logging.info(f"csv output : {self.csv}")
+        logging.info(f"mdp_folder : {self.mdp_folder}")
+        logging.info(f"mdp files  : {self.mdp_folder / 'eq0.mdp'}, {self.mdp_folder / 'eq1.mdp'}, {self.mdp_folder / 'ti0.mdp'}, {self.mdp_folder / 'ti1.mdp'}")
+        logging.info(f"Temperature: {self.ref_t} K")
+        logging.info(f"kBT        : {self.kBT} kJ/mol")
+        logging.info(f"MDRUN      : {self.MDRUN}")
+        logging.info(f"GROMPP     : {self.GROMPP}")
+        logging.info(f"tmp_folder : {self.tmp_folder}")
+
+    def run_eq_grompp(self):
+        """
+        Call self.GROMPP (gmx grompp) to prepare eq.tpr files
+        :return: None
+        """
+        mdp_eq0 = self.mdp_folder / "eq0.mdp"
+        mdp_eq1 = self.mdp_folder / "eq1.mdp"
+        wdir = self.current_folder
+        self.prepare_current_folder()
+        cpt0, gro0 = self.s0
+        cpt1, gro1 = self.s1
+        top_file = self.top
+        cmd_list_base = [
+            f"{self.GROMPP} -f {mdp_eq0} -c {gro0} -t {cpt0} -p {top_file} -o {wdir / '0' / 'eq.tpr'}",
+            f"{self.GROMPP} -f {mdp_eq1} -c {gro1} -t {cpt1} -p {top_file} -o {wdir / '1' / 'eq.tpr'}",]
+        if self.min_output:
+            cmd_list = [cmd + " > /dev/null 2>&1" for cmd in cmd_list_base]
+        else:
+            cmd_list = [cmd_list_base[0] + f" > {wdir / '0' / 'grompp_eq.log'} 2>&1",
+                        cmd_list_base[1] + f" > {wdir / '1' / 'grompp_eq.log'} 2>&1"]
+        for cmd in cmd_list:
+            logging.debug(cmd)
+        processes = [subprocess.Popen(cmd, shell=True) for cmd in cmd_list]
+        for p in processes:
+            p.communicate()
+        # make sure 2 tpr files are generated
+        for tpr in [wdir / '0/eq.tpr', wdir / '1/eq.tpr']:
+            if not tpr.exists():
+                logging.info(f"File {tpr} not found. grompp_eq failed.")
+                raise RuntimeError(f"File {tpr} not found. grompp_eq failed.")
+
+    def run_eq_mdrun(self):
+        """
+        Call self.MDRUN (mpirun -np 2 gmx_mpi mdrun) to run eq simulation
+        :return: None
+        """
+        wdir = self.current_folder
+        mdrun = self.MDRUN
+        multi_dir = f"-multidir {wdir}/0 {wdir}/1"
+        cmd = f"{mdrun} -s eq.tpr {multi_dir} -deffnm eq "
+        if self.min_output:
+            cmd += " > /dev/null 2>&1"
+        else:
+            cmd += f" > {wdir / 'mdrun_eq.log'} 2>&1"
+        logging.debug(cmd)
+        p = subprocess.Popen(cmd, shell=True, env=self.env)
+        p.communicate()
+        # make sure 2 eq.gro files are generated
+        for f in [wdir / "0" / "eq.gro", wdir / "1" / "eq.gro"]:
+            if not f.exists():
+                logging.info(f"File {f} not found. eq_mdrun failed.")
+                raise RuntimeError(f"File {f} not found. eq_mdrun failed.")
+
+    def run_ti_grompp(self):
+        """
+        Call self.GROMPP (gmx grompp) to prepare ti.tpr files under self.tmp_folder
+        :return: None
+        """
+        mdp_ti0 = self.mdp_folder / "ti0.mdp"
+        mdp_ti1 = self.mdp_folder / "ti1.mdp"
+        wdir = self.current_folder
+        tmp_folder = self.tmp_folder
+        cpt0 = wdir / "0" / "eq.cpt"
+        gro0 = wdir / "0" / "eq.gro"
+        tpr0 = tmp_folder / "0" / "ti.tpr"
+        cpt1 = wdir / "1" / "eq.cpt"
+        gro1 = wdir / "1" / "eq.gro"
+        tpr1 = tmp_folder / "1" / "ti.tpr"
+        top_file = self.top
+        cmd_list_base = [
+            f"{self.GROMPP} -f {mdp_ti0} -c {gro0} -t {cpt0} -p {top_file} -o {tpr0}",
+            f"{self.GROMPP} -f {mdp_ti1} -c {gro1} -t {cpt1} -p {top_file} -o {tpr1}",
+        ]
+        if self.min_output:
+            cmd_list = [cmd + " > /dev/null 2>&1" for cmd in cmd_list_base]
+        else:
+            cmd_list = [cmd_list_base[0] + f" > {wdir / '0' / 'grompp_ti.log'} 2>&1 ",
+                        cmd_list_base[1] + f" > {wdir / '1' / 'grompp_ti.log'} 2>&1 ",
+                        ]
+        for cmd in cmd_list:
+            logging.debug(cmd)
+        processes = [subprocess.Popen(cmd, shell=True) for cmd in cmd_list]
+        for p in processes:
+            p.communicate()
+        # make sure the tpr files are generated
+        for tpr in [tpr0, tpr1]:
+            if not tpr.exists():
+                logging.info(f"File {tpr} not found. grompp_ti failed.")
+                raise RuntimeError(f"File {tpr} not found. grompp_ti failed.")
+
+    def run_ti_mdrun(self):
+        """
+        Call self.MDRUN (mpirun -np 2 gmx_mpi mdrun) to run TI simulation
+        :return: work01, work10
+        """
+        mdrun = self.MDRUN
+        tmp_folder = self.tmp_folder
+        wdir = self.current_folder
+        multi_dir = f"-multidir {tmp_folder}/0 {tmp_folder}/1"
+        cmd = f"{mdrun} -s ti.tpr {multi_dir} -deffnm ti "
+        if self.min_output:
+            cmd += " > /dev/null 2>&1"
+        else:
+            cmd += f" > {wdir / 'mdrun_ti.log'} 2>&1"
+        logging.debug(cmd)
+        p = subprocess.Popen(cmd, shell=True, env=self.env)
+        p.communicate()
+        # make sure 2 ti.gro files are generated
+        for f in [tmp_folder / "0" / "ti.gro", tmp_folder / "1" / "ti.gro"]:
+            if not f.exists():
+                logging.info(f"File {f} not found. ti_mdrun failed.")
+                raise RuntimeError(f"File {f} not found. ti_mdrun failed.")
+
+        # integrate. get work value. The work that external force does on the system. <0 means system releases energy
+        work01 = util.integrate_work(tmp_folder / "0" / "ti.xvg")
+        work10 = -util.integrate_work(tmp_folder / "1" / "ti.xvg")
+        # save ti.gro and ti.cpt
+        for i in range(2):
+            tmp_folder = self.tmp_folder / str(i)
+            rep_folder = self.current_folder / str(i)
+            for f in ["ti.gro", "ti.cpt"]:
+                shutil.copy(tmp_folder / f, rep_folder / f)
+        # if debug, also save ti.xvg ti.tpr
+        if self.debug:
+            for i in range(2):
+                tmp_folder = self.tmp_folder / str(i)
+                rep_folder = self.current_folder / str(i)
+                for f in ["ti.xvg", "ti.tpr"]:
+                    shutil.copy(tmp_folder / f, rep_folder / f)
+        # clean up, except ti.gro, ti.cpt
+        for f in [self.tmp_folder/"0", self.tmp_folder/"1"]:
+            for f2 in f.iterdir():
+                if f2.is_file():
+                    if f2.name not in ["ti.gro", "ti.cpt"]:
+                        logging.debug(f"rm {f2}")
+                        f2.unlink()
+        return work01, work10
+
+    def swap_check(self, w01, w10):
+        """
+
+        :param w01: Work 0->1 in kJ/mol
+        :param w10: Work 1->0 in kJ/mol
+        :return: None
+        """
+        p_accept = np.exp(-(w01 + w10) / self.kBT)
+        csv_line = f"{self.current_cycle:5d},{w01:16.12},{w10:16.12},{min(1, p_accept):16.3f},"
+        info_line = f"Cycle {self.current_cycle}, {w01:9.3f} kJ/mol, {w10:9.3f} kJ/mol, {min(1, p_accept):6.3f},"
+        swap_flag = np.random.rand() < p_accept
+        if swap_flag:
+            csv_line += "A\n"
+            info_line += " Accept"
+            self.s0 = [self.tmp_folder / "1" / "ti.cpt", self.tmp_folder / "1" / "ti.gro"]
+            self.s1 = [self.tmp_folder / "0" / "ti.cpt", self.tmp_folder / "0" / "ti.gro"]
+        else:
+            csv_line += "R\n"
+            info_line += " Reject"
+            self.s0 = [self.current_folder / "0" / "eq.cpt", self.current_folder / "0" / "eq.gro"]
+            self.s1 = [self.current_folder / "1" / "eq.cpt", self.current_folder / "1" / "eq.gro"]
+        logging.info(info_line)
+        logging.debug(f"In the next cycle: 0 starts from {self.s0[0]} {self.s0[1]}, and 1 starts from {self.s1[0]} {self.s1[1]}")
+
+        with open(self.csv, 'a') as f:
+            f.write(csv_line)
+
+    def cycle(self, cycle, maxh=24):
+        """
+        :param cycle: int, number of cycles (work evaluation) to run
+        :param maxh: float, terminate after this time. Time will only be checked at the start of a cycle.
+        If either cycle or maxh is reached, the program will stop.
+        :return: Bool, True if the simulation is finished without error.
+        """
+        if not self.safe_flag:
+            logging.info("Safety check failed. Cannot start the simulation.")
+            return False
+        t0 = time.time()
+        for i in range(cycle):
+            t1 = time.time()
+            if t1 - t0 > maxh * 3600:
+                logging.info(f"Terminate after {maxh} h. Time exceeded.")
+                return False
+            logging.info(f"Cycle {self.current_cycle} eq")
+            if self.current_cycle != 0:
+                self.run_eq_grompp()
+            self.run_eq_mdrun()
+            logging.info(f"Cycle {self.current_cycle} TI")
+            self.run_ti_grompp()
+            w01, w10 = self.run_ti_mdrun()
+            self.swap_check(w01, w10)
+            self.current_cycle += 1
+            self.set_current_folder()
+
+            t2 = time.time()
+            logging_ave_time_cycle((t2-t0)/(i+1) , t2 - t1)
+        return True
+
+    def estimate_free_energy(self):
+        """
+        Read csv file and estimate free energy using BAR
+        :return: dG, dG_error
+        """
+        df = pd.read_csv(self.csv)
+        work01 = df["Work_01 (kJ/mol)"].values
+        work10 = df["Work_10 (kJ/mol)"].values
+        dG, dGe = util.free_E_bar(work01/self.kBT, work10/self.kBT)
+        return dG, dGe, df
+
 
 def main():
     t0 = time.time()
@@ -278,7 +468,8 @@ def main():
                         type=str, help='Folder to start the simulation. Default : 000000',
                         default='000000')
     parser.add_argument('-cycle', metavar=" ",
-                        type=int, help='Number of cycles (work evaluation) to run. Default : 10',
+                        type=lambda x: int(x) if int(x) > 0 else parser.error("Cycle must be greater than 0"),
+                        help='Number of cycles (work evaluation) to run. Default : 10',
                         default=10)
     parser.add_argument('-maxh', metavar=" ",
                         type=float, help='Terminate after this time. It will only be checked at the start of a cycle. '
@@ -297,17 +488,20 @@ def main():
                         type=str,
                         help='Temporary folder. Point it to the local storage on the computing node to save IO. '
                              'You can also set this to /dev/shm if you have enough memory. '
-                             'Default : auto determined by python tempfile', )
+                             'Default : auto determined by python tempfile. https://docs.python.org/3.11/library/tempfile.html', )
     parser.add_argument('-re_try', metavar=" ",
                         type=int,
                         help='Number of re-try if the simulation fails. Default : 3',
                         default=3)
     parser.add_argument('--debug',
-                        action='store_true', help='Print debug information')
+                        action='store_true', help='Print debug information and save all TI output.')
     parser.add_argument('--format', metavar=" ",
-                        type=str, help='Log format. Default : "%%(asctime)s - %%(levelname)s - %%(message)s" . '
-                                       'If you want a clean output, use "%%(message)s". In debug run, this will be ignored.',
-                        default='%(asctime)s - %(levelname)s - %(message)s')
+                        type=str,
+                        help='Log format. Default : "%%(message)s" . In debug run, '
+                             'the format will be forced to "%%(asctime)s - %%(levelname)s - %%(message)s" . '
+                             'Please check https://docs.python.org/3/library/logging.html#logging.basicConfig for '
+                             'more detail.',
+                        default='%(message)s')
     parser.add_argument('--min_output',
                         action='store_true',
                         help='Minimal IO. If you are sure about what you are doing and you want the minimal output '
@@ -315,25 +509,10 @@ def main():
 
     args = parser.parse_args()
     env = os.environ.copy()
-    settings = {"top": Path(args.p),
-                "log": Path(args.log),
-                "csv": Path(args.csv),
-                "mdp_folder": Path(args.mdp_folder),
-                "cycle": args.cycle,
-                "folder_start": Path(args.folder_start),
-                "maxh": args.maxh,
-                "MDRUN": args.MDRUN,
-                "GROMPP": args.GROMPP,
-                "tmp_folder": args.tmp_folder,
-                "DEBUG": args.debug,
-                "current_cycle": 0,
-                "base_path": Path.cwd(),
-                "re_try": args.re_try,
-                "env"   : env,
-                "min_output" : args.min_output
-                }
-    if settings["folder_start"].name == "000000":  # new start
-        util.backup_if_exist_gmx(settings["log"])
+
+    if args.folder_start == "000000":  # new start
+        util.backup_if_exist_gmx(args.log)
+
     if args.debug:
         # set log to DEBUG
         logging.basicConfig(
@@ -346,89 +525,6 @@ def main():
             filename=args.log, filemode='a',
             level=logging.INFO,
             format=args.format)
-
-    if args.tmp_folder is None:
-        settings["tmp_folder"] = Path(tempfile.mkdtemp(prefix="pmxNCMCRE_"))
-    else:
-        settings["tmp_folder"] = Path(tempfile.mkdtemp(dir=args.tmp_folder, prefix="pmxNCMCRE_"))
-
-    # make sure input files exist
-    for name in ["top"]:
-        if not settings[name].exists():
-            logging.info(f"File {settings[name]} not found")
-            exit(1)
-
-    for mdp_name in ["eq0.mdp", "eq1.mdp", "ti0.mdp", "ti1.mdp"]:
-        if not (settings["mdp_folder"] / mdp_name).exists():
-            logging.info(f"File {settings['mdp_folder'] / mdp_name} not found")
-            exit(1)
-    ref_t_list = [util.get_ref_T(settings["mdp_folder"] / mdp_name) for mdp_name in
-                  ["eq0.mdp", "eq1.mdp", "ti0.mdp", "ti1.mdp"]]
-    # all close
-    if not np.allclose(ref_t_list, ref_t_list[0]):
-        logging.info(f"Reference temperature are not the same: {ref_t_list}")
-        exit(1)
-    else:
-        settings["ref_t"] = ref_t_list[0]
-    for mdp in ["ti0.mdp", "ti1.mdp"]:
-        if not util.mdp_check_TI(settings["mdp_folder"] / mdp):
-            exit(1)
-
-    # if folder_start is 00000, we will start from scratch
-    if settings["folder_start"].name == "000000":
-        logging.info("New simulation starting from cycle 0")
-        settings["current_cycle"] = 0
-        # make sure 2 tpr exist
-        for tpr in [settings["folder_start"]/"0/eq.tpr", settings["folder_start"]/"1/eq.tpr"]:
-            if not tpr.exists():
-                logging.info(f"File {tpr} not found. Please prepare {settings['folder_start']/'0/eq.tpr'} and {settings['folder_start']/'1/eq.tpr'} using \"gmx grompp\"")
-                exit(1)
-        for file_name in [settings["csv"]]:
-            util.backup_if_exist_gmx(file_name)
-        with open(settings["csv"], "w") as f:
-            f.writelines([f"Cycle,Work_01 (kJ/mol),Work_10 (kJ/mol),Acceptance_ratio,Accept_{settings['ref_t']}\n"])
-    elif int(settings["folder_start"].name) < 0:
-        logging.info(f"Invalid folder_start {settings['folder_start']}")
-        exit(1)
-    else: # this is a restart (append) job
-        settings["current_cycle"] = int(settings["folder_start"].name)
-        logging.info(f"Restart from Cycle {settings['current_cycle']}, assume this Cycle has been finished")
-        # read csv, prepare s0, s1
-        with open(settings["csv"], "r") as f:
-            l = f.readlines()[-1].rstrip()
-        words = l.split(",")
-        cycle = int(words[0])
-        # w01, w10, p_accept= [float(i) for i in words[1:-1]]
-        # check if cycle from csv matches the folder
-        if cycle != settings["current_cycle"]:
-            logging.info(f"Cycle from csv {cycle} does not match the folder {settings['current_cycle']}")
-            exit(1)
-        else:
-            current_folder = Path(f"{settings['current_cycle']:06d}")
-
-        # prepare starting cpt,gro
-        if words[-1] == "A":
-            s0 = current_folder / "1/ti.cpt", current_folder / "1/ti.gro"
-            s1 = current_folder / "0/ti.cpt", current_folder / "0/ti.gro"
-        elif words[-1] == "R":
-            s0 = current_folder / "0/eq.cpt", current_folder / "0/eq.gro"
-            s1 = current_folder / "1/eq.cpt", current_folder / "1/eq.gro"
-        else:
-            logging.info(f"Invalid csv line {l}, cannot proceed with restart.")
-            exit(1)
-        for f in s0 + s1:
-            logging.debug(f"Check file {f}")
-            if not f.exists():
-                logging.info(f"File {f} not found")
-                exit(1)
-        settings['current_cycle'] += 1
-        current_folder = Path(f"{settings['current_cycle']:06d}")
-
-    if settings["re_try"] <= 0:
-        logging.info(f"re_try should be larger than 0")
-        exit(1)
-
-    kBT = util.kB_kj_mol * settings["ref_t"]  # kJ * K/mol
     command_line = ""
     for word in sys.argv:
         if " " in word or "%" in word:
@@ -437,86 +533,37 @@ def main():
             command_line += word + " "
     logging.info(f"Command line: {command_line}")
     logging.info(f"pmx_mdrun version {pmxNCMC.__version__}")
-    logging.info(f"# Simulation settings #############################################################################")
-    logging.info(f"topology   : {settings['top']}")
-    logging.info(f"log output : {settings['log']}")
-    logging.info(f"csv output : {settings['csv']}")
-    logging.info(f"mdp_folder : {settings['mdp_folder']}")
-    logging.info(
-        f"mdp files  : {settings['mdp_folder'] / 'eq0.mdp'} {settings['mdp_folder'] / 'eq1.mdp'} {settings['mdp_folder'] / 'ti0.mdp'} {settings['mdp_folder'] / 'ti1.mdp'}")
-    logging.info(f"Temperature: {settings['ref_t']} K")
-    logging.info(f"kBT        : {kBT} kJ/mol")
-    logging.info(f"MDRUN  command : {settings['MDRUN']}")
-    logging.info(f"GROMPP command : {settings['GROMPP']}")
-    logging.info(f"tmp_folder     : {settings['tmp_folder']}")
-    logging.info(f"Cycle (eq+ti) to run : {settings['cycle']}")
-    logging.info(f"Maximum running time : {settings['maxh']} h = {settings['maxh'] * 60} min")
-    logging.info(f"Re-try if failed     : {settings['re_try']}")
-    logging.info(f"# Simulation settings End #########################################################################")
-
-    prepare_scratch_folder(settings["tmp_folder"])
+    logging.info(f"log file: {args.log}")
+    if args.tmp_folder is None:
+        tmp_folder = Path(tempfile.mkdtemp(prefix="pmxRE_"))
+    else:
+        tmp_folder = Path(tempfile.mkdtemp(dir=args.tmp_folder, prefix="pmxRE_"))
     try:
-        # eq+NCMC cycle
-        t_tick = time.time()  # track time for each cycle
-        for cycle in range(settings["cycle"]):
-            # check time
-            if (time.time() - t0) / 3600 > settings["maxh"]:
-                logging.info(f"Time limit reached, exit")
-                break
-
-            settings["current_folder"] = Path(f"{settings['current_cycle']:06d}")
-            logging.info(f"Cycle {settings['current_cycle']}, eq")
-            prepare_current_folder(settings['current_folder'])  # mkdir current_folder/0, current_folder/1
-
-            succ_flag = False
-            for re_try in range(settings["re_try"]):
-                try:
-                    # eq
-                    if settings["current_cycle"] != 0:
-                        run_eq_grompp(settings, s0, s1)
-                    run_eq_mdrun(settings)
-                    # TI
-                    logging.info(f"Cycle {settings['current_cycle']}, TI")
-                    run_ti_grompp(settings)
-                    w01, w10 = run_ti_mdrun(settings)
-                    succ_flag = True
-                    break
-                except RuntimeError as e:
-                    logging.info(f"Cycle {settings['current_cycle']} failed, retry {re_try + 1}")
-                    logging.info(f"Error: {e}")
-            if not succ_flag:
-                logging.info(f"Cycle {settings['current_cycle']} failed {settings['re_try']} fimes, exit")
-                raise RuntimeError(f"Cycle {settings['current_cycle']} failed {settings['re_try']} fimes, exit")
-
-            # swap attempt
-            _, csv_line, s0, s1 = swap_check(w01, w10, kBT, settings)
-            with open(settings["csv"], "a") as f:
-                f.write(csv_line)
-
-            settings["current_cycle"] += 1
-            t_tock = time.time()
-            logging_ave_time_cycle((t_tock - t0) / (cycle + 1), t_tock - t_tick)
-            t_tick = t_tock
-
-        df = pd.read_csv(settings["csv"])
-        logging.info(f"Read {settings['csv']} and estimate free energy difference using {len(df)} cycles.")
-        work01 = df[df.columns[1]]  # 0->1, kJ/mol
-        work10 = df[df.columns[2]]
-        dG, dGe = util.free_E_bar(work01 / kBT, work10 / kBT)
-        logging.info(f"DeltaG = {dG*kBT:6.2f} +- {dGe*kBT:4.2f} kJ/mol")
-        kBT_kcal = util.kB_kcal_mol * settings["ref_t"]  # kcal/mol
-        logging.info(f"       = {dG*kBT_kcal:6.2f} +- {dGe*kBT_kcal:4.2f} kcal/mol")
-        t_tock = time.time()
-        for func_name, times in fun_exe_times.items():
-            avg_time = np.mean(times)
-            logging.info(f"Average time for {func_name:14s}: {avg_time:5.2f} s, {sum(times)/(t_tock-t0)*100:5.2f}%")
-
+        mdrun = PMX_MDRUN_RE(top=Path(args.p),
+                             csv=Path(args.csv),
+                             mdp_folder=Path(args.mdp_folder),
+                             folder_start=Path(args.folder_start),
+                             MDRUN=args.MDRUN,
+                             GROMPP=args.GROMPP,
+                             tmp_folder=tmp_folder,
+                             env=env,
+                             min_output=args.min_output,
+                             debug=args.debug)
+        mdrun.safety_check()
+        mdrun.log_sim_settings()
+        s_flag = mdrun.cycle(args.cycle, args.maxh)
+        if s_flag:
+            dG, dGe, df = mdrun.estimate_free_energy()
+            logging.info(f"Estimate free energy difference using {len(df)} cycles")
+            kBT = mdrun.kBT
+            logging.info(f"DeltaG = {dG * kBT:6.2f} +- {dGe * kBT:4.2f} kJ/mol")
+            kBT_kcal = util.kB_kcal_mol * mdrun.ref_t
+            logging.info(f"       = {dG * kBT_kcal:6.2f} +- {dGe * kBT_kcal:4.2f} kcal/mol")
     finally:
+        shutil.rmtree(tmp_folder)
         t1 = time.time() - t0
         logging.info(f"pmx_mdrun finished in {int(t1 // 3600)} h {int((t1 % 3600) // 60)} min {(t1 % 60):.1f} s")
-        logging.info(f"Cleaning up ...")
-        shutil.rmtree(settings["tmp_folder"])
-        logging.info(f"ALL Done")
+
 
 
 if __name__ == "__main__":
