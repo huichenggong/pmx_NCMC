@@ -205,4 +205,4 @@ def plot_work_dist(wf, wr, kBT_in=None, fname="Wdist.png", nbins=20, dG=None, dG
                  label=r'$\Delta$G = %.2f $\pm$ %.2f %s' % (dG*kBT, dGerr*kBT, units))
         ax2.legend(loc='upper center', prop={'size': 12})
     ax2.set_ylim(ax1.get_ylim())
-    fig.savefig(fname, dpi=300)
+    fig.savefig(fname, dpi=300, bbox_inches='tight')
