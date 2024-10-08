@@ -1,10 +1,10 @@
 integrator              = sd      ; stochastic leap-frog integrator
 dt                      = 0.002
-nsteps                  = 50000
+nsteps                  = 5000
 nstxtcout               = 0
 nstvout                 = 0
 nstfout                 = 0
-nstcalcenergy           = 1
+nstcalcenergy           = 10
 nstenergy               = 0
 nstlog                  = 0
 ;
@@ -41,7 +41,7 @@ comm_grps               = System
 ;----------------------------------------------------
 free-energy       = yes
 init-lambda       = 0          ; start from state A
-delta-lambda      = 2e-5      ; increment per time step for lambda, delta-lambda * nsteps = length of lambda
+delta-lambda      = 2e-4      ; increment per time step for lambda, delta-lambda * nsteps = length of lambda
 
 separate-dhdl-file = yes      ; The free energy (dh/dl) values will be written to an xvg file. If no, to edr file.
 nstdhdl            = 1        ; write to dhdl at each step
