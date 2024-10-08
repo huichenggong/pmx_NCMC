@@ -32,13 +32,13 @@ cp ../01-trans/rep_999 ./ -r
 ```
 
 ### 2.3 run pmx_mdrun (step by step)  
-1. Prepare 1 replica
+#### 1. Prepare 1 replica
 ```bash
 cd mdrun/01-trans/
 cp rep_999 rep_0 -r
 ```
   
-2. Pre-equilibrium  
+#### 2. Pre-equilibrium  
 ```bash
 base=$PWD
 
@@ -60,7 +60,7 @@ gmx grompp -f ../../mdp/eq1.mdp -c ../../eq/1/eq.gro -p ../../../../../topol.top
 cd $base
 ```
 
-3. Now we has everything for `pmx_mdrun`  
+#### 3. Now we has everything for `pmx_mdrun`  
 ```bash
 ├── 000000         # cycle 0, 1 eq + 1 ti would be 1 cycle
 │   ├── 0
@@ -74,7 +74,7 @@ cd $base
     └── ti1.mdp    # ti run for B to A
 ```
 
-4. Start a new mdrun  
+#### 4. Start a new mdrun  
 ```bash
 pmx_mdrun \
     -l md_0.log \
@@ -84,7 +84,7 @@ pmx_mdrun \
     -GROMPP "gmx grompp"
 ```
 
-5. Append more cycle  
+#### 5. Append more cycle  
 Output files `md_0.log` and `md.csv` will be append.
 ```bash
 pmx_mdrun \
@@ -101,7 +101,7 @@ DeltaG = -20.31 +- 0.30 kJ/mol
        =  -4.85 +- 0.07 kcal/mol
 ```
 
-6. Free energy estimation  
+#### 6. Free energy estimation  
 ```bash
 analysis_bar -csv md.csv --unit kcal
 ```
