@@ -84,8 +84,8 @@ pmx_mdrun \
     -GROMPP "gmx grompp"
 ```
 
-5. Append more cycle 
-`md_0.log` and `md.csv` will be append.
+5. Append more cycle  
+Output files `md_0.log` and `md.csv` will be append.
 ```bash
 pmx_mdrun \
     -l md_0.log \
