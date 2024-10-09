@@ -584,7 +584,7 @@ def main():
     if args.cyc_until is not None:
         if args.cycle is not None:
             logging.info("Argument cycle will be ignored.")
-        args.cycle = args.cyc_until - int(folder_start)
+        args.cycle = args.cyc_until - int(folder_start) - 1
         logging.info(f"Run until cycle {args.cyc_until}. {args.cycle} cycles to run.")
     else:
         if args.cycle is None:
