@@ -129,19 +129,19 @@ def plot_work_dist_line(ax, w_f, w_r,  smooth_window=11):
     :param w_f: Forward work in the target unit
     :param w_r: Reverse work in the target unit
     :param smooth_window: size of the window in moving window average (smoothing).
-        If there is less data, smoothed line will not be plotted
+        If there is not enough data, smoothed line will not be plotted
     :return: None
     """
     x1 = np.arange(len(w_f))
     x2 = np.arange(len(w_r))
     if len(x1) > smooth_window+1:
-        ax.plot(x1, w_f, 'g-', linewidth=2, label="Forward (0->1)", alpha=.3)
+        ax.plot(x1, w_f, 'g.', linestyle="", label="Forward (0->1)")
         sm1 = np.convolve(w_f, np.ones(11) / 11, mode='valid')
         ax.plot(x1[5:-5], sm1, 'g-', linewidth=3)
     else:
         ax.plot(x1, w_f, 'g-', linewidth=3, label="Forward (0->1)")
     if len(x2) > smooth_window+1:
-        ax.plot(x2, w_r, 'b-', linewidth=2, label="Backward (1->0)", alpha=.3)
+        ax.plot(x2, w_r, 'b.', linestyle="", label="Backward (1->0)")
         sm2 = np.convolve(w_r, np.ones(11) / 11, mode='valid')
         ax.plot(x2[5:-5], sm2, 'b-', linewidth=3)
     else:
