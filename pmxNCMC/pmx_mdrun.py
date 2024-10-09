@@ -91,6 +91,7 @@ class PMX_MDRUN_RE:
         self.current_cycle = None
         self.ref_t = None
         self.kBT = None
+        self.current_folder = None
 
     def set_current_folder(self):
         """
@@ -219,6 +220,11 @@ class PMX_MDRUN_RE:
 
         self.safe_flag = True
         self.prepare_scratch_folder()
+        if self.min_output:
+            if self.folder_start.name == "000000":
+                for i in range(2):
+                    logging.debug(f"cp {self.folder_start / str(i) / 'eq.tpr'} {self.tmp_folder / str(i) / 'eq.tpr'}")
+                    shutil.copy(self.folder_start / str(i) / "eq.tpr", self.tmp_folder / str(i) / "eq.tpr")
         return True
 
     def log_sim_settings(self):
@@ -235,6 +241,7 @@ class PMX_MDRUN_RE:
         logging.info(f"MDRUN      : {self.MDRUN}")
         logging.info(f"GROMPP     : {self.GROMPP}")
         logging.info(f"tmp_folder : {self.tmp_folder}")
+        logging.info(f"min_output : {self.min_output}")
 
     @time_function("run_eq_grompp")
     def run_eq_grompp(self):
@@ -244,19 +251,22 @@ class PMX_MDRUN_RE:
         """
         mdp_eq0 = self.mdp_folder / "eq0.mdp"
         mdp_eq1 = self.mdp_folder / "eq1.mdp"
-        wdir = self.current_folder
+
         self.prepare_current_folder()
         cpt0, gro0 = self.s0
         cpt1, gro1 = self.s1
         top_file = self.top
         cmd_list_base = [
-            f"{self.GROMPP} -f {mdp_eq0} -c {gro0} -t {cpt0} -p {top_file} -o {wdir / '0' / 'eq.tpr'}",
-            f"{self.GROMPP} -f {mdp_eq1} -c {gro1} -t {cpt1} -p {top_file} -o {wdir / '1' / 'eq.tpr'}",]
+            f"{self.GROMPP} -f {mdp_eq0} -c {gro0} -t {cpt0} -p {top_file} ",
+            f"{self.GROMPP} -f {mdp_eq1} -c {gro1} -t {cpt1} -p {top_file} ",]
         if self.min_output:
-            cmd_list = [cmd + " > /dev/null 2>&1" for cmd in cmd_list_base]
+            wdir = self.tmp_folder
+            cmd_list = [cmd_list_base[0] + f" -o {wdir / '0' / 'eq.tpr'} > /dev/null 2>&1",
+                        cmd_list_base[1] + f" -o {wdir / '1' / 'eq.tpr'} > /dev/null 2>&1"]
         else:
-            cmd_list = [cmd_list_base[0] + f" > {wdir / '0' / 'grompp_eq.log'} 2>&1",
-                        cmd_list_base[1] + f" > {wdir / '1' / 'grompp_eq.log'} 2>&1"]
+            wdir = self.current_folder
+            cmd_list = [cmd_list_base[0] + f" -o {wdir / '0' / 'eq.tpr'} > {wdir / '0' / 'grompp_eq.log'} 2>&1",
+                        cmd_list_base[1] + f" -o {wdir / '1' / 'eq.tpr'} > {wdir / '1' / 'grompp_eq.log'} 2>&1"]
         for cmd in cmd_list:
             logging.debug(cmd)
         processes = [subprocess.Popen(cmd, shell=True) for cmd in cmd_list]
@@ -274,14 +284,12 @@ class PMX_MDRUN_RE:
         Call self.MDRUN (mpirun -np 2 gmx_mpi mdrun) to run eq simulation
         :return: None
         """
-        wdir = self.current_folder
-        mdrun = self.MDRUN
-        multi_dir = f"-multidir {wdir}/0 {wdir}/1"
-        cmd = f"{mdrun} -s eq.tpr {multi_dir} -deffnm eq "
         if self.min_output:
-            cmd += " > /dev/null 2>&1"
+            wdir = self.tmp_folder
+            cmd = f"{self.MDRUN} -s eq.tpr -multidir {wdir}/0 {wdir}/1 -deffnm eq > /dev/null 2>&1"
         else:
-            cmd += f" > {wdir / 'mdrun_eq.log'} 2>&1"
+            wdir = self.current_folder
+            cmd = f"{self.MDRUN} -s eq.tpr -multidir {wdir}/0 {wdir}/1 -deffnm eq > {wdir / 'mdrun_eq.log'} 2>&1"
         logging.debug(cmd)
         p = subprocess.Popen(cmd, shell=True, env=self.env)
         p.communicate()
@@ -290,6 +298,11 @@ class PMX_MDRUN_RE:
             if not f.exists():
                 logging.info(f"File {f} not found. eq_mdrun failed.")
                 raise RuntimeError(f"File {f} not found. eq_mdrun failed.")
+        if self.min_output:
+            for f in ["eq.cpt", "eq.gro"]:
+                for i in range(2):
+                    logging.debug(f"cp {self.tmp_folder / str(i) / f} {self.current_folder / str(i) / f}")
+                    shutil.copy(self.tmp_folder / str(i) / f, self.current_folder / str(i) / f)
 
     @time_function("run_ti_grompp")
     def run_ti_grompp(self):
@@ -299,7 +312,10 @@ class PMX_MDRUN_RE:
         """
         mdp_ti0 = self.mdp_folder / "ti0.mdp"
         mdp_ti1 = self.mdp_folder / "ti1.mdp"
-        wdir = self.current_folder
+        if self.min_output:
+            wdir = self.tmp_folder
+        else:
+            wdir = self.current_folder
         tmp_folder = self.tmp_folder
         cpt0 = wdir / "0" / "eq.cpt"
         gro0 = wdir / "0" / "eq.gro"
@@ -344,6 +360,10 @@ class PMX_MDRUN_RE:
             cmd += " > /dev/null 2>&1"
         else:
             cmd += f" > {wdir / 'mdrun_ti.log'} 2>&1"
+        for f in [tmp_folder / "0" / "ti.gro", tmp_folder / "1" / "ti.gro"]:
+            if f.exists():
+                logging.debug(f"rm {f}")
+                f.unlink()
         logging.debug(cmd)
         p = subprocess.Popen(cmd, shell=True, env=self.env)
         p.communicate()
@@ -510,7 +530,8 @@ def main():
     parser.add_argument('--min_output',
                         action='store_true',
                         help='Minimal IO. If you are sure about what you are doing and you want the minimal output '
-                             'to save IO. This will redirect all gromacs stdout/stderr to /dev/null.')
+                             'to save IO. This will run eq on tmp_folder and redirect all gromacs stdout/stderr to '
+                             '/dev/null. Only eq.cpt, eq.gro, ti.cpt, ti.gro will be saved.')
 
     args = parser.parse_args()
     env = os.environ.copy()
