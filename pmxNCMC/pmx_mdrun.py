@@ -19,9 +19,9 @@ import subprocess
 
 fun_exe_times = {
     'run_eq_grompp': [],
-    'run_eq_mdrun': [],
+    'run_eq_mdrun' : [],
     'run_ti_grompp': [],
-    'run_ti_mdrun': []
+    'run_ti_mdrun' : [],
 }
 def time_function(func_name):
     def decorator(func):
@@ -236,6 +236,7 @@ class PMX_MDRUN_RE:
         logging.info(f"GROMPP     : {self.GROMPP}")
         logging.info(f"tmp_folder : {self.tmp_folder}")
 
+    @time_function("run_eq_grompp")
     def run_eq_grompp(self):
         """
         Call self.GROMPP (gmx grompp) to prepare eq.tpr files
@@ -267,6 +268,7 @@ class PMX_MDRUN_RE:
                 logging.info(f"File {tpr} not found. grompp_eq failed.")
                 raise RuntimeError(f"File {tpr} not found. grompp_eq failed.")
 
+    @time_function("run_eq_mdrun")
     def run_eq_mdrun(self):
         """
         Call self.MDRUN (mpirun -np 2 gmx_mpi mdrun) to run eq simulation
@@ -289,6 +291,7 @@ class PMX_MDRUN_RE:
                 logging.info(f"File {f} not found. eq_mdrun failed.")
                 raise RuntimeError(f"File {f} not found. eq_mdrun failed.")
 
+    @time_function("run_ti_grompp")
     def run_ti_grompp(self):
         """
         Call self.GROMPP (gmx grompp) to prepare ti.tpr files under self.tmp_folder
@@ -326,6 +329,7 @@ class PMX_MDRUN_RE:
                 logging.info(f"File {tpr} not found. grompp_ti failed.")
                 raise RuntimeError(f"File {tpr} not found. grompp_ti failed.")
 
+    @time_function("run_ti_mdrun")
     def run_ti_mdrun(self):
         """
         Call self.MDRUN (mpirun -np 2 gmx_mpi mdrun) to run TI simulation
@@ -349,7 +353,7 @@ class PMX_MDRUN_RE:
                 logging.info(f"File {f} not found. ti_mdrun failed.")
                 raise RuntimeError(f"File {f} not found. ti_mdrun failed.")
 
-        # integrate. get work value. The work that external force does on the system. <0 means system releases energy
+        # integrate. get work value. W<0 means system releases energy
         work01 = util.integrate_work(tmp_folder / "0" / "ti.xvg")
         work10 = -util.integrate_work(tmp_folder / "1" / "ti.xvg")
         # save ti.gro and ti.cpt
@@ -358,8 +362,8 @@ class PMX_MDRUN_RE:
             rep_folder = self.current_folder / str(i)
             for f in ["ti.gro", "ti.cpt"]:
                 shutil.copy(tmp_folder / f, rep_folder / f)
-        # if debug, also save ti.xvg ti.tpr
-        if self.debug:
+
+        if self.debug: # if debug model, save ti.xvg ti.tpr
             for i in range(2):
                 tmp_folder = self.tmp_folder / str(i)
                 rep_folder = self.current_folder / str(i)
@@ -417,11 +421,11 @@ class PMX_MDRUN_RE:
             if t1 - t0 > maxh * 3600:
                 logging.info(f"Terminate after {maxh} h. Time exceeded.")
                 return False
-            logging.info(f"Cycle {self.current_cycle} eq")
+            logging.info(f"Cycle {self.current_cycle}, eq")
             if self.current_cycle != 0:
                 self.run_eq_grompp()
             self.run_eq_mdrun()
-            logging.info(f"Cycle {self.current_cycle} TI")
+            logging.info(f"Cycle {self.current_cycle}, TI")
             self.run_ti_grompp()
             w01, w10 = self.run_ti_mdrun()
             self.swap_check(w01, w10)
@@ -452,25 +456,26 @@ def main():
             Replica Exchange with lambda 0 and 1 only or Non-equilibrium Candidate Monte Carlo.""")
     parser.add_argument('-p',
                         metavar='topology',
-                        type=str, help='Topology file',
+                        type=Path, help='Topology file',
                         default='topol.top')
     parser.add_argument('-log', metavar=" ",
                         type=str, help='Log file',
                         default='md.log')
     parser.add_argument('-csv', metavar=" ",
-                        type=str, help='CSV file for saving work values. Default : md.csv',
+                        type=Path, help='CSV file for saving work values. Default : md.csv',
                         default='md.csv')
     parser.add_argument('-mdp_folder', metavar=" ",
-                        type=str,
+                        type=Path,
                         help='Folder that contains eq0.mdp, eq1.mdp, ti0.mdp, ti1.mdp. All 4 files are required. '
                              'File name should be exact.')
     parser.add_argument('-folder_start', metavar=" ",
-                        type=str, help='Folder to start the simulation. Default : 000000',
-                        default='000000')
+                        type=str, help='Folder to start the simulation. If not given, check the csv file. ')
     parser.add_argument('-cycle', metavar=" ",
-                        type=lambda x: int(x) if int(x) > 0 else parser.error("Cycle must be greater than 0"),
-                        help='Number of cycles (work evaluation) to run. Default : 10',
-                        default=10)
+                        type=lambda x: int(x) if int(x) > 0 else parser.error("cycle must be greater than 0"),
+                        help='Number of cycles (work evaluation) to run.')
+    parser.add_argument('-cyc_until', metavar=" ",
+                        type=lambda x: int(x) if int(x) > 0 else parser.error("cyc_until must be greater than 0"),
+                        help='Number of cycles (work evaluation) to run.',)
     parser.add_argument('-maxh', metavar=" ",
                         type=float, help='Terminate after this time. It will only be checked at the start of a cycle. '
                                          'The actually running time can possibly exceed this time. Default : 23.5 h',
@@ -514,7 +519,6 @@ def main():
         util.backup_if_exist_gmx(args.log)
 
     if args.debug:
-        # set log to DEBUG
         logging.basicConfig(
             filename=args.log, filemode='a',
             level=logging.DEBUG,
@@ -526,6 +530,7 @@ def main():
             level=logging.INFO,
             format=args.format)
     command_line = ""
+
     for word in sys.argv:
         if " " in word or "%" in word:
             command_line += f'"{word}" '
@@ -534,15 +539,43 @@ def main():
     logging.info(f"Command line: {command_line}")
     logging.info(f"pmx_mdrun version {pmxNCMC.__version__}")
     logging.info(f"log file: {args.log}")
+
     if args.tmp_folder is None:
         tmp_folder = Path(tempfile.mkdtemp(prefix="pmxRE_"))
     else:
         tmp_folder = Path(tempfile.mkdtemp(dir=args.tmp_folder, prefix="pmxRE_"))
+
+    if not (args.folder_start is None):
+        folder_start = args.folder_start
+    else:
+        if args.csv.is_file():
+            with open(args.csv) as f:
+                lines = f.readlines()
+            if len(lines) > 1:
+                current_cycle = int(lines[-1].split(",")[0])
+                folder_start = f"{current_cycle:06d}"
+            else:
+                folder_start = "000000"
+        else:
+            folder_start = "000000"
+
+    # count cycle if cyc_until is given
+    if args.cyc_until is not None:
+        if args.cycle is not None:
+            logging.info("Argument cycle will be ignored.")
+        args.cycle = args.cyc_until - int(folder_start)
+        logging.info(f"Run until cycle {args.cyc_until}. {args.cycle} cycles to run.")
+    else:
+        if args.cycle is None:
+            parser.error("Either cycle or cyc_until must be given.")
+
+
+
     try:
-        mdrun = PMX_MDRUN_RE(top=Path(args.p),
-                             csv=Path(args.csv),
-                             mdp_folder=Path(args.mdp_folder),
-                             folder_start=Path(args.folder_start),
+        mdrun = PMX_MDRUN_RE(top=args.p,
+                             csv=args.csv,
+                             mdp_folder=args.mdp_folder,
+                             folder_start=Path(folder_start),
                              MDRUN=args.MDRUN,
                              GROMPP=args.GROMPP,
                              tmp_folder=tmp_folder,
@@ -559,6 +592,12 @@ def main():
             logging.info(f"DeltaG = {dG * kBT:6.2f} +- {dGe * kBT:4.2f} kJ/mol")
             kBT_kcal = util.kB_kcal_mol * mdrun.ref_t
             logging.info(f"       = {dG * kBT_kcal:6.2f} +- {dGe * kBT_kcal:4.2f} kcal/mol")
+
+            # log the time for each function
+            t1 = time.time() - t0
+            for key, value in fun_exe_times.items():
+                if len(value) > 0:
+                    logging.info(f"Average time {key:13s} :{np.mean(value):7.2f} s, {np.sum(value)/t1*100:5.2f}%")
     finally:
         shutil.rmtree(tmp_folder)
         t1 = time.time() - t0
