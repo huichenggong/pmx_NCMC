@@ -25,7 +25,7 @@ mamba remove -n pmx_NCMC --all
 ```bash
 cd test/2-pentene/
 ```
-Please check the `README.md` under `test/2-pentene/` for more detail
+Please check the [README.md](test/2-pentene/README.md) under `test/2-pentene/` for more detail
 
 ![convergence](./test/2-pentene/mdrun/convergence.jpeg)
 
