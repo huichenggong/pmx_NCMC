@@ -13,6 +13,7 @@ class MyTestCase(unittest.TestCase):
         self.MDRUN="mpirun -np 2 --bind-to none gmx_mpi mdrun"
         self.GROMPP="gmx grompp"
         self.env=os.environ.copy()
+        self.min_output=True
 
     def test_PMX_MDRUN_RE_init(self):
         print("Test New Start")
@@ -23,11 +24,10 @@ class MyTestCase(unittest.TestCase):
             csv.unlink()
         mdp_folder = Path("../../01-trans/rep_999/mdp/")
         folder_start = Path("000000")
-        min_output=False
         with tempfile.TemporaryDirectory(prefix="pmxRE_test_") as tmp_folder:
             tmp_folder=Path(tmp_folder)
             mdrun = PMX_MDRUN_RE(top, csv, mdp_folder, folder_start, self.MDRUN, self.GROMPP,
-                                 tmp_folder, self.env, min_output)
+                                 tmp_folder, self.env, self.min_output)
             self.assertTrue(mdrun.safety_check())
             self.assertTrue(mdrun.safe_flag)
             mdrun.run_eq_mdrun()
@@ -48,14 +48,13 @@ class MyTestCase(unittest.TestCase):
         csv = Path("./md.csv")
         mdp_folder = Path("../../01-trans/rep_999/mdp/")
         folder_start = Path("000199")
-        min_output=False
         p_new = Path("000200")
         if p_new.is_dir():
             shutil.rmtree(p_new)
         with tempfile.TemporaryDirectory(prefix="pmxRE_test_") as tmp_folder:
             tmp_folder=Path(tmp_folder)
             mdrun = PMX_MDRUN_RE(top, csv, mdp_folder, folder_start, self.MDRUN, self.GROMPP,
-                                 tmp_folder, self.env, min_output)
+                                 tmp_folder, self.env, self.min_output)
             self.assertTrue(mdrun.safety_check())
             self.assertTrue(mdrun.safe_flag)
             mdrun.run_eq_grompp()
@@ -74,11 +73,10 @@ class MyTestCase(unittest.TestCase):
             csv.unlink()
         mdp_folder = Path("../../01-trans/rep_999/mdp/")
         folder_start = Path("000000")
-        min_output=False
         with tempfile.TemporaryDirectory(prefix="pmxRE_test_") as tmp_folder:
             tmp_folder = Path(tmp_folder)
             mdrun = PMX_MDRUN_RE(top, csv, mdp_folder, folder_start, self.MDRUN, self.GROMPP,
-                                 tmp_folder, self.env, min_output)
+                                 tmp_folder, self.env, self.min_output)
             self.assertTrue(mdrun.safety_check())
             mdrun.log_sim_settings()
             self.assertTrue(mdrun.cycle(4, 0.5))
