@@ -145,28 +145,30 @@ class PMX_MDRUN_RE:
         # all mdp files should exist
         for mdp in mdp_list:
             if not (self.mdp_folder/mdp).exists():
-                logging.info(f"File {self.mdp_folder/mdp} not found")
+                logging.error(f"File {self.mdp_folder/mdp} not found")
                 return False
 
         # temperature should be the same
         ref_t_list = [util.get_ref_T(self.mdp_folder / mdp_name) for mdp_name in mdp_list]
         if not np.allclose(ref_t_list, ref_t_list[0], atol=1e-5):
-            logging.info(f"Temperature is not the same in all 4 mdp files: {ref_t_list}")
+            logging.error(f"Temperature is not the same in all 4 mdp files: {ref_t_list}")
             return False
         self.ref_t = ref_t_list[0]
         self.kBT = util.kB_kj_mol * self.ref_t
 
         # TI should be 0->1, 1->0
         if not util.mdp_check_TI(self.mdp_folder / "ti0.mdp", 0):
+            logging.error(f"nstep * delta_lambda is not 1 in ti0.mdp")
             return False
         if not util.mdp_check_TI(self.mdp_folder / "ti1.mdp", 1):
+            logging.error(f"nstep * delta_lambda is not -1 in ti1.mdp")
             return False
 
         self.current_cycle = int(self.folder_start.name)
         if self.folder_start.name == "000000": # new start
             for tpr in [self.folder_start / '0/eq.tpr', self.folder_start / '1/eq.tpr']:
                 if not tpr.exists():
-                    logging.info(f"File {tpr} not found")
+                    logging.error(f"File {tpr} not found")
                     return False
             if self.csv.is_file():
                 name_new = util.backup_if_exist_gmx(self.csv)
@@ -177,43 +179,42 @@ class PMX_MDRUN_RE:
 
         else: # append run
             if not self.csv.is_file():
-                logging.info(f"File {self.csv} not found. Cannot restart.")
+                logging.error(f"File {self.csv} not found. Cannot restart.")
                 return False
             with open(self.csv) as f:
                 lines = f.readlines()
             if len(lines) <= 1:
-                logging.info(f"File {self.csv} is empty. Cannot restart")
+                logging.error(f"File {self.csv} is empty. Cannot restart")
                 return False
             l0 = lines[0].split("_")
             if lines[0][:64] != "Cycle,Work_01 (kJ/mol),Work_10 (kJ/mol),Acceptance_ratio,Accept_":
-                logging.info(f"Heading of {self.csv} is incorrect. Cannot restart")
+                logging.error(f"Heading of {self.csv} is incorrect. Cannot restart")
                 return False
             if not np.allclose(float(l0[-1]), self.ref_t):
-                logging.info(f"Temperature in the heading of {self.csv} is not the same as in mdp files.")
+                logging.error(f"Temperature in the heading of {self.csv} is not the same as in mdp files.")
                 return False
             last_cycle = int(lines[-1].split(",")[0])
             if last_cycle != self.current_cycle:
-                logging.info(f"Last cycle in {self.csv} is {last_cycle}. But the given folder is {self.folder_start.name}")
+                logging.error(f"Last cycle in {self.csv} is {last_cycle}. But the given folder is {self.folder_start.name}")
                 return False
             for i in range(2):
                 for fname in ["eq.cpt", "eq.gro"]:
                     f = self.folder_start / str(i) / fname
                     if not f.is_file():
-                        logging.info(f"File {f} not found")
+                        logging.error(f"File {f} not found")
                         return False
             if lines[-1].split(",")[-1] == "A\n":
                 self.s0 = [self.folder_start / "1" / "ti.cpt", self.folder_start / "1" / "ti.gro"]
                 self.s1 = [self.folder_start / "0" / "ti.cpt", self.folder_start / "0" / "ti.gro"]
                 for f in self.s0 + self.s1:
                     if not f.exists():
-                        logging.info(f"File {f} not found")
+                        logging.error(f"File {f} not found")
                         return False
             elif lines[-1].split(",")[-1] == "R\n":
                 self.s0 = [self.folder_start / "0" / "eq.cpt", self.folder_start / "0" / "eq.gro"]
                 self.s1 = [self.folder_start / "1" / "eq.cpt", self.folder_start / "1" / "eq.gro"]
             else:
-                logging.info(f"Cannot interpreter the last line of {self.csv}")
-                logging.info(lines[-1])
+                logging.error(f"Cannot interpreter the last line of {self.csv} : {lines[-1]}")
                 return False
             self.current_cycle += 1
             self.set_current_folder()
@@ -275,7 +276,7 @@ class PMX_MDRUN_RE:
         # make sure 2 tpr files are generated
         for tpr in [wdir / '0/eq.tpr', wdir / '1/eq.tpr']:
             if not tpr.exists():
-                logging.info(f"File {tpr} not found. grompp_eq failed.")
+                logging.error(f"File {tpr} not found. grompp_eq failed.")
                 raise RuntimeError(f"File {tpr} not found. grompp_eq failed.")
 
     @time_function("run_eq_mdrun")
@@ -296,7 +297,7 @@ class PMX_MDRUN_RE:
         # make sure 2 eq.gro files are generated
         for f in [wdir / "0" / "eq.gro", wdir / "1" / "eq.gro"]:
             if not f.exists():
-                logging.info(f"File {f} not found. eq_mdrun failed.")
+                logging.error(f"File {f} not found. eq_mdrun failed.")
                 raise RuntimeError(f"File {f} not found. eq_mdrun failed.")
         if self.min_output:
             for f in ["eq.cpt", "eq.gro"]:
@@ -342,7 +343,7 @@ class PMX_MDRUN_RE:
         # make sure the tpr files are generated
         for tpr in [tpr0, tpr1]:
             if not tpr.exists():
-                logging.info(f"File {tpr} not found. grompp_ti failed.")
+                logging.error(f"File {tpr} not found. grompp_ti failed.")
                 raise RuntimeError(f"File {tpr} not found. grompp_ti failed.")
 
     @time_function("run_ti_mdrun")
@@ -370,7 +371,7 @@ class PMX_MDRUN_RE:
         # make sure 2 ti.gro files are generated
         for f in [tmp_folder / "0" / "ti.gro", tmp_folder / "1" / "ti.gro"]:
             if not f.exists():
-                logging.info(f"File {f} not found. ti_mdrun failed.")
+                logging.error(f"File {f} not found. ti_mdrun failed.")
                 raise RuntimeError(f"File {f} not found. ti_mdrun failed.")
 
         # integrate. get work value. W<0 means system releases energy
@@ -433,7 +434,7 @@ class PMX_MDRUN_RE:
         :return: Bool, True if the simulation is finished without error.
         """
         if not self.safe_flag:
-            logging.info("Safety check failed. Cannot start the simulation.")
+            logging.error("Safety check failed. Cannot start the simulation.")
             return False
         t0 = time.time()
         for i in range(cycle):
@@ -485,9 +486,9 @@ def main():
                         type=Path, help='CSV file for saving work values. Default : md.csv',
                         default='md.csv')
     parser.add_argument('-mdp_folder', metavar=" ",
-                        type=Path,
+                        type=Path, default=Path("mdp"),
                         help='Folder that contains eq0.mdp, eq1.mdp, ti0.mdp, ti1.mdp. All 4 files are required. '
-                             'File name should be exact.')
+                             'File name should be exact. Default : ./mdp')
     parser.add_argument('-folder_start', metavar=" ",
                         type=str, help='Folder to start the simulation. If not given, check the csv file. ')
     parser.add_argument('-cycle', metavar=" ",
@@ -514,10 +515,6 @@ def main():
                         help='Temporary folder. Point it to the local storage on the computing node to save IO. '
                              'You can also set this to /dev/shm if you have enough memory. '
                              'Default : auto determined by python tempfile. https://docs.python.org/3.11/library/tempfile.html', )
-    parser.add_argument('-re_try', metavar=" ",
-                        type=int,
-                        help='Number of re-try if the simulation fails. Default : 3',
-                        default=3)
     parser.add_argument('--debug',
                         action='store_true', help='Print debug information and save all TI output.')
     parser.add_argument('--format', metavar=" ",
@@ -536,7 +533,20 @@ def main():
     args = parser.parse_args()
     env = os.environ.copy()
 
-    if args.folder_start == "000000":  # new start
+    if not (args.folder_start is None):
+        folder_start = args.folder_start
+    else:
+        if args.csv.is_file():
+            with open(args.csv) as f:
+                lines = f.readlines()
+            if len(lines) > 1:
+                current_cycle = int(lines[-1].split(",")[0])
+                folder_start = f"{current_cycle:06d}"
+            else:
+                folder_start = "000000"
+        else:
+            folder_start = "000000"
+    if folder_start == "000000":  # new start
         util.backup_if_exist_gmx(args.log)
 
     if args.debug:
@@ -566,19 +576,7 @@ def main():
     else:
         tmp_folder = Path(tempfile.mkdtemp(dir=args.tmp_folder, prefix="pmxRE_"))
 
-    if not (args.folder_start is None):
-        folder_start = args.folder_start
-    else:
-        if args.csv.is_file():
-            with open(args.csv) as f:
-                lines = f.readlines()
-            if len(lines) > 1:
-                current_cycle = int(lines[-1].split(",")[0])
-                folder_start = f"{current_cycle:06d}"
-            else:
-                folder_start = "000000"
-        else:
-            folder_start = "000000"
+
 
     # count cycle if cyc_until is given
     if args.cyc_until is not None:
@@ -603,7 +601,8 @@ def main():
                              env=env,
                              min_output=args.min_output,
                              debug=args.debug)
-        mdrun.safety_check()
+        if not mdrun.safety_check():
+            return
         mdrun.log_sim_settings()
         s_flag = mdrun.cycle(args.cycle, args.maxh)
         if s_flag:
