@@ -23,15 +23,12 @@ setup(
     author_email='chenggong.hui@mpinat.mpg.de',
     description='IO based implementation of NCMC in pmx',
     packages=find_packages(),
-    install_requires=["python>=3.7",
-                      "pymbar>=3, <5",
+    install_requires=["pymbar>=3, <5",
                       "numpy",
                       "pandas",
                       "matplotlib",
                       "scipy>=1.7.0"],
-    # scripts=['script/pmx_mdrun.py',
-    #          'script/analysis_bar.py',
-    #          ],
+    python_requires='>=3.7',
     entry_points={
         'console_scripts': [
             'pmx_mdrun=pmxNCMC.pmx_mdrun:main',
