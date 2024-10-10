@@ -201,14 +201,14 @@ class PMX_MDRUN_RE:
                 for fname in ["eq.cpt", "eq.gro"]:
                     f = self.folder_start / str(i) / fname
                     if not f.is_file():
-                        logging.error(f"File {f} not found")
+                        logging.error(f"{self.csv} suggests restarting from {self.folder_start}, but {f} cannot be found. Restart Failed")
                         return False
             if lines[-1].split(",")[-1] == "A\n":
                 self.s0 = [self.folder_start / "1" / "ti.cpt", self.folder_start / "1" / "ti.gro"]
                 self.s1 = [self.folder_start / "0" / "ti.cpt", self.folder_start / "0" / "ti.gro"]
                 for f in self.s0 + self.s1:
                     if not f.exists():
-                        logging.error(f"File {f} not found")
+                        logging.error(f"{self.csv} suggests restarting from {self.folder_start}, but {f} cannot be found. Restart Failed")
                         return False
             elif lines[-1].split(",")[-1] == "R\n":
                 self.s0 = [self.folder_start / "0" / "eq.cpt", self.folder_start / "0" / "eq.gro"]
