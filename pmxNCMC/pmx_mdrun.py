@@ -490,7 +490,7 @@ def main():
                         help='Folder that contains eq0.mdp, eq1.mdp, ti0.mdp, ti1.mdp. All 4 files are required. '
                              'File name should be exact. Default : ./mdp')
     parser.add_argument('-folder_start', metavar=" ",
-                        type=str, help='Folder to start the simulation. If not given, check the csv file. ')
+                        type=str, help='Folder to start the simulation. If not given, csv file will be checked. ')
     parser.add_argument('-cycle', metavar=" ",
                         type=lambda x: int(x) if int(x) > 0 else parser.error("cycle must be greater than 0"),
                         help='Number of cycles (work evaluation) to run.')
@@ -498,16 +498,16 @@ def main():
                         type=lambda x: int(x) if int(x) > 0 else parser.error("cyc_until must be greater than 0"),
                         help='Number of cycles (work evaluation) to run.',)
     parser.add_argument('-maxh', metavar=" ",
-                        type=float, help='Terminate after this time. It will only be checked at the start of a cycle. '
+                        type=float, help='Terminate after this time. Time will only be checked at the start of a cycle. '
                                          'The actually running time can possibly exceed this time. Default : 23.5 h',
                         default=23.5)
     parser.add_argument('-MDRUN', metavar=" ",
                         type=str,
-                        help='command for mdrun, we will use multidir, MPI is required. '
+                        help='Command for mdrun, we will use multidir, MPI is required. '
                              'Default : "mpirun -np 2 --bind-to none gmx_mpi mdrun"',
                         default='mpirun -np 2 --bind-to none gmx_mpi mdrun')
     parser.add_argument('-GROMPP', metavar=" ",
-                        type=str, help='command for grompp, with additional flags. '
+                        type=str, help='Command for grompp, with additional flags. '
                                        'For example "gmx_threads_AVX_256 grompp -maxwarn 1" Default : "gmx grompp"',
                         default='gmx grompp')
     parser.add_argument('-tmp_folder', metavar=" ",
