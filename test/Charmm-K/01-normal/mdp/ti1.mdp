@@ -1,0 +1,91 @@
+;====================================================
+; Production simulation
+;====================================================
+
+
+;----------------------------------------------------
+; RUN CONTROL
+;----------------------------------------------------
+integrator   = sd            ; stochastic leap-frog integrator
+nsteps       = 25000         ; 50 ps
+dt           = 0.002         ; 2 fs
+comm-mode    = Linear        ; remove center of mass translation
+nstcomm      = 100           ; frequency for center of mass motion removal
+
+;----------------------------------------------------
+; OUTPUT CONTROL
+;----------------------------------------------------
+nstxout                = 0          ; no trr coordinates
+nstvout                = 0          ; no trr velocities
+nstfout                = 0          ; no trr forces
+nstxout-compressed     = 0          ; xtc 1ns/frame
+nstlog                 = 0          ;
+nstenergy              = 0          ; no edr output
+nstcalcenergy          = 50         ; calculate energies every X steps
+
+;----------------------------------------------------
+; BONDS
+;----------------------------------------------------
+constraint_algorithm   = lincs      ; holonomic constraints
+constraints            = h-bonds    ; hydrogens only are constrained
+continuation           = yes        ; formerly known as 'unconstrained-start' - useful for exact continuations and reruns
+
+;----------------------------------------------------
+; NEIGHBOR SEARCHING
+;----------------------------------------------------
+cutoff-scheme   = Verlet
+ns-type         = grid   ; search neighboring grid cells
+nstlist         = 50     ;
+rlist           = 1.2    ; short-range neighborlist cutoff (in nm)
+pbc             = xyz    ; 3D PBC
+
+;----------------------------------------------------
+; ELECTROSTATICS
+;----------------------------------------------------
+coulombtype      = PME      ; Particle Mesh Ewald for long-range electrostatics
+rcoulomb         = 1.2      ; short-range electrostatic cutoff (in nm)
+ewald_geometry   = 3d       ; Ewald sum is performed in all three dimensions
+pme-order        = 4        ; interpolation order for PME (default is 4)
+fourierspacing   = 0.10     ; grid spacing for FFT
+ewald-rtol       = 1e-6     ; relative strength of the Ewald-shifted direct potential at rcoulomb
+
+;----------------------------------------------------
+; VDW Charmm
+;----------------------------------------------------
+vdwtype                 = Cut-off
+vdw-modifier            = Force-switch
+rvdw_switch             = 1.0
+rvdw                    = 1.2
+
+;----------------------------------------------------
+; TEMPERATURE & PRESSURE COUPL
+;----------------------------------------------------
+tc_grps          = System
+tau_t            = 1.0
+ref_t            = 298
+pcoupl           = Parrinello-Rahman
+pcoupltype       = isotropic            ; uniform scaling of box vectors
+tau_p            = 10                   ; time constant (ps)
+ref_p            = 1.0                  ; reference pressure (bar)
+compressibility  = 4.5e-05              ; isothermal compressibility of water (bar^-1)
+tcoupl           = no
+
+
+;----------------------------------------------------
+; VELOCITY GENERATION
+;----------------------------------------------------
+gen_vel      = no       ; Velocity generation is off
+
+; Free energy variables
+free-energy              = yes
+init-lambda              = 1     ; start from state B
+delta-lambda             = -4e-5 ; nsteps * delta-lambda = +-1
+nstdhdl                  = 1     ; dhdl xvg output every step
+
+couple-moltype           = POT
+couple-lambda0           = vdw-q
+couple-lambda1           = none
+sc-alpha                 = 0.25
+sc-power                 = 1
+sc-sigma                 = 0.3
+sc-coul                  = yes
