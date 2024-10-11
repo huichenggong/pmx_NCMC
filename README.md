@@ -22,10 +22,13 @@ mamba remove -n pmx_NCMC --all
 
 
 ## 2. Example
+### 2.1 Dihedral rotation of 2-pentene
 Please check the [test/2-pentene](test/2-pentene) for more detail
 
 ![convergence](./test/2-pentene/mdrun/convergence.jpeg)
 
+### 2.2 Solvation free energy of $K^+$ in water
+Please check [test/Charmm-K/](test/Charmm-K/) for more detail
 
 ## 3. Theory
 ![Theory](./Fig/theory.jpg)
