@@ -7,7 +7,7 @@ energy calculation.
 ## 1. Installation
 ### 1.1 Create a conda/mamba env
 ```bash
-mamba create -n pmx_NCMC python=3.11 pymbar numpy pandas matplotlib -c conda-forge
+mamba create -n pmx_NCMC python=3.11 pymbar-core numpy pandas matplotlib -c conda-forge
 mamba activate  pmx_NCMC  # mambda works the same as conda
 ```
 ### 1.2 Pip install package
@@ -22,10 +22,7 @@ mamba remove -n pmx_NCMC --all
 
 
 ## 2. Example
-```bash
-cd test/2-pentene/
-```
-Please check the [README.md](test/2-pentene/README.md) under `test/2-pentene/` for more detail
+Please check the [test/2-pentene](test/2-pentene) for more detail
 
 ![convergence](./test/2-pentene/mdrun/convergence.jpeg)
 

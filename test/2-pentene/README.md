@@ -31,7 +31,7 @@ cd mdrun/02-cis/
 cp ../01-trans/rep_999 ./ -r
 ```
 
-### 2.3 run pmx_mdrun (step by step)  
+### 2.3 run pmx_mdrun and analysis step by step
 #### 1. Prepare 1 replica
 ```bash
 cd mdrun/01-trans/
@@ -64,9 +64,9 @@ cd $base
 ```bash
 ├── 000000         # cycle 0, 1 eq + 1 ti would be 1 cycle
 │   ├── 0
-│   │   └── eq.tpr # 100 ps equilibrium MD in state A
+│   │   └── eq.tpr # 10 ps equilibrium MD in state A
 │   └── 1
-│       └── eq.tpr # 100 ps equilibrium MD in state B
+│       └── eq.tpr # 10 ps equilibrium MD in state B
 └── mdp
     ├── eq0.mdp    # eq run for stateA
     ├── eq1.mdp    # eq run for stateB
@@ -111,10 +111,13 @@ The work distribution will be plotted in `Wplot.png`
 You can also save the work value in separate files, if you want to adapt to pmx work flow.  
 ```bash
 analysis_bar -csv md.csv -oA integA.dat -oB integB.dat --unit kcal
-# unit argument will not change output unit in integA.dat and integB.dat, as pmx only accept kJ/mol
+# unit argument will not change the output unit in integA.dat and integB.dat, as pmx only accept kJ/mol
 pmx analyse -iA integA.dat -iB integB.dat
 ```
 
+#### 7. Work distribution in 10 replicas
+![Overall_work](mdrun/work_distribution.jpeg)
+Without RE, trans and cis are separated, and the reversed work gives 2 peaks. With exchange, both 0->1 and 1->0 have 2 peaks.
 ## 3. Further analysis  
 ![convergence_check](./mdrun/convergence.jpeg)
 Without replica exchange, trans and cis would not converge to the same value.  
