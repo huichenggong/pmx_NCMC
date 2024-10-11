@@ -23,7 +23,7 @@ setup(
     author_email='chenggong.hui@mpinat.mpg.de',
     description='IO based implementation of NCMC in pmx',
     packages=find_packages(),
-    install_requires=["pymbar>=3, <5",
+    install_requires=["pymbar>=3,<5",
                       "numpy",
                       "pandas",
                       "matplotlib",

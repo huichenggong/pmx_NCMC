@@ -8,13 +8,13 @@ import time
 from functools import wraps
 import logging
 import tempfile
+import subprocess
 
 import numpy as np
 import pandas as pd
 
 import pmxNCMC
 from pmxNCMC import util
-import subprocess
 
 
 fun_exe_times = {
@@ -66,7 +66,6 @@ class PMX_MDRUN_RE:
         :param GROMPP: str, command for grompp, with additional flags.
             For example "gmx_threads_AVX_256 grompp -maxwarn 1"
         :param tmp_folder: pathlib.Path, temporary folder where the TI job will run.
-        :param base_path: pathlib.Path, base working directory
         :param env: dict, environment variables
         :param min_output: bool, set to True will redirect all gromacs stdout/stderr to /dev/null
         :param debug: bool, set to True will save ti files
