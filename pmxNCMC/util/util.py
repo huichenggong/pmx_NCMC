@@ -1,6 +1,7 @@
 import os
 import shutil
 import logging
+
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.integrate import simpson
@@ -19,7 +20,6 @@ def integrate_work(ti_xvg):
     dh_dl = np.loadtxt(ti_xvg, comments=["@", "#"])
     lam = np.linspace(0, 1, len(dh_dl))
     return simpson(dh_dl[:, 1], x=lam)
-
 
 def backup_if_exist_gmx(f_name):
     """
@@ -48,7 +48,6 @@ def get_ref_T(mdp_file):
                     logging.info(f"There are more than 1 ref_t in {line.rstrip()}, return the first one")
                 return float(t_words[0])
     raise Exception(f"Cannot find ref_t in {mdp_file}")
-
 
 def mdp_check_TI(mdp_file, init_lam):
     """
@@ -96,7 +95,7 @@ def free_E_bar(work01, work10):
     try:
         # pymbar 3
         dG, dGe = pymbar.BAR(work01, work10)
-    except AttributeError as e:
+    except AttributeError:
         # pymbar 4
         res = pymbar.other_estimators.bar(work01, work10)
         dG = res["Delta_f"]
