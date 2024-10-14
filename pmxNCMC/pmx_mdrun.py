@@ -349,7 +349,7 @@ class PMX_MDRUN_RE:
     def run_ti_mdrun(self):
         """
         Call self.MDRUN (mpirun -np 2 gmx_mpi mdrun) to run TI simulation
-        :return: work01, work10
+        :return: None
         """
         mdrun = self.MDRUN
         tmp_folder = self.tmp_folder
@@ -376,12 +376,13 @@ class PMX_MDRUN_RE:
         # integrate. get work value. W<0 means system releases energy
         work01 = util.integrate_work(tmp_folder / "0" / "ti.xvg")
         work10 = -util.integrate_work(tmp_folder / "1" / "ti.xvg")
-        # save ti.gro and ti.cpt
-        for i in range(2):
-            tmp_folder = self.tmp_folder / str(i)
-            rep_folder = self.current_folder / str(i)
-            for f in ["ti.gro", "ti.cpt"]:
-                shutil.copy(tmp_folder / f, rep_folder / f)
+        swap_flag, csv_line = self.swap_check(work01, work10)
+        if swap_flag: # save ti.gro and ti.cpt
+            for i in range(2):
+                tmp_folder = self.tmp_folder / str(i)
+                rep_folder = self.current_folder / str(i)
+                for f in ["ti.gro", "ti.cpt"]:
+                    shutil.copy(tmp_folder / f, rep_folder / f)
 
         if self.debug: # if debug model, save ti.xvg ti.tpr
             for i in range(2):
@@ -396,14 +397,17 @@ class PMX_MDRUN_RE:
                     if f2.name not in ["ti.gro", "ti.cpt"]:
                         logging.debug(f"rm {f2}")
                         f2.unlink()
-        return work01, work10
+        
+        with open(self.csv, 'a') as f:
+            f.write(csv_line)
+        
 
     def swap_check(self, w01, w10):
         """
 
         :param w01: Work 0->1 in kJ/mol
         :param w10: Work 1->0 in kJ/mol
-        :return: None
+        :return: swap_flag, csv_line
         """
         p_accept = np.exp(-(w01 + w10) / self.kBT)
         csv_line = f"{self.current_cycle:5d},{w01:16.12},{w10:16.12},{min(1, p_accept):16.3f},"
@@ -422,8 +426,9 @@ class PMX_MDRUN_RE:
         logging.info(info_line)
         logging.debug(f"In the next cycle: 0 starts from {self.s0[0]} {self.s0[1]}, and 1 starts from {self.s1[0]} {self.s1[1]}")
 
-        with open(self.csv, 'a') as f:
-            f.write(csv_line)
+        # with open(self.csv, 'a') as f:
+        #     f.write(csv_line)
+        return swap_flag, csv_line
 
     def cycle(self, cycle, maxh=24):
         """
@@ -447,8 +452,7 @@ class PMX_MDRUN_RE:
             self.run_eq_mdrun()
             logging.info(f"Cycle {self.current_cycle}, TI")
             self.run_ti_grompp()
-            w01, w10 = self.run_ti_mdrun()
-            self.swap_check(w01, w10)
+            self.run_ti_mdrun()
             self.current_cycle += 1
             self.set_current_folder()
 

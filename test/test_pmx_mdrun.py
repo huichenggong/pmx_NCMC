@@ -32,8 +32,7 @@ class MyTestCase(unittest.TestCase):
             self.assertTrue(mdrun.safe_flag)
             mdrun.run_eq_mdrun()
             mdrun.run_ti_grompp()
-            w01, w10 = mdrun.run_ti_mdrun()
-            mdrun.swap_check(w01, w10)
+            mdrun.run_ti_mdrun()
         csv.unlink()
         for i in range(2):
             for f in (folder_start/str(i)).iterdir():
@@ -60,8 +59,7 @@ class MyTestCase(unittest.TestCase):
             mdrun.run_eq_grompp()
             mdrun.run_eq_mdrun()
             mdrun.run_ti_grompp()
-            w01, w10 = mdrun.run_ti_mdrun()
-            mdrun.swap_check(w01, w10)
+            mdrun.run_ti_mdrun()
         shutil.rmtree(p_new)
 
     def test_PMX_MDRUN_RE_new_cycle(self):
