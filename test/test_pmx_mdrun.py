@@ -13,7 +13,7 @@ class MyTestCase(unittest.TestCase):
         self.MDRUN="mpirun -np 2 --bind-to none gmx_mpi mdrun"
         self.GROMPP="gmx grompp"
         self.env=os.environ.copy()
-        self.min_output=True
+        self.min_output=False
 
     def test_PMX_MDRUN_RE_init(self):
         print("Test New Start")

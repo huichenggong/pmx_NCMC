@@ -261,12 +261,12 @@ class PMX_MDRUN_RE:
             f"{self.GROMPP} -f {mdp_eq1} -c {gro1} -t {cpt1} -p {top_file} ",]
         if self.min_output:
             wdir = self.tmp_folder
-            cmd_list = [cmd_list_base[0] + f" -o {wdir / '0' / 'eq.tpr'} > /dev/null 2>&1",
-                        cmd_list_base[1] + f" -o {wdir / '1' / 'eq.tpr'} > /dev/null 2>&1"]
+            cmd_list = [cmd_list_base[0] + f" -o {wdir / '0/eq.tpr'} -po {wdir/'0/mdout.mdp'} > /dev/null 2>&1",
+                        cmd_list_base[1] + f" -o {wdir / '1/eq.tpr'} -po {wdir/'1/mdout.mdp'} > /dev/null 2>&1"]
         else:
             wdir = self.current_folder
-            cmd_list = [cmd_list_base[0] + f" -o {wdir / '0' / 'eq.tpr'} > {wdir / '0' / 'grompp_eq.log'} 2>&1",
-                        cmd_list_base[1] + f" -o {wdir / '1' / 'eq.tpr'} > {wdir / '1' / 'grompp_eq.log'} 2>&1"]
+            cmd_list = [cmd_list_base[0] + f" -o {wdir / '0/eq.tpr'} -po {wdir/'0/mdout.mdp'} > {wdir / '0' / 'grompp_eq.log'} 2>&1",
+                        cmd_list_base[1] + f" -o {wdir / '1/eq.tpr'} -po {wdir/'1/mdout.mdp'} > {wdir / '1' / 'grompp_eq.log'} 2>&1"]
         for cmd in cmd_list:
             logging.debug(cmd)
         processes = [subprocess.Popen(cmd, shell=True) for cmd in cmd_list]
@@ -320,13 +320,15 @@ class PMX_MDRUN_RE:
         cpt0 = wdir / "0" / "eq.cpt"
         gro0 = wdir / "0" / "eq.gro"
         tpr0 = tmp_folder / "0" / "ti.tpr"
+        mdout0 = tmp_folder / "0" / "mdout.mdp"
         cpt1 = wdir / "1" / "eq.cpt"
         gro1 = wdir / "1" / "eq.gro"
         tpr1 = tmp_folder / "1" / "ti.tpr"
+        mdout1 = tmp_folder / "1" / "mdout.mdp"
         top_file = self.top
         cmd_list_base = [
-            f"{self.GROMPP} -f {mdp_ti0} -c {gro0} -t {cpt0} -p {top_file} -o {tpr0}",
-            f"{self.GROMPP} -f {mdp_ti1} -c {gro1} -t {cpt1} -p {top_file} -o {tpr1}",
+            f"{self.GROMPP} -f {mdp_ti0} -c {gro0} -t {cpt0} -p {top_file} -o {tpr0} -po {mdout0} ",
+            f"{self.GROMPP} -f {mdp_ti1} -c {gro1} -t {cpt1} -p {top_file} -o {tpr1} -po {mdout1} ",
         ]
         if self.min_output:
             cmd_list = [cmd + " > /dev/null 2>&1" for cmd in cmd_list_base]
