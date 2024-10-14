@@ -582,7 +582,11 @@ def main():
         if args.cycle is not None:
             logging.info("Argument cycle will be ignored.")
         args.cycle = args.cyc_until - int(folder_start) - 1
-        logging.info(f"Run until cycle {args.cyc_until}. {args.cycle} cycles to run.")
+        if args.cycle <= 0:
+            logging.error(f"Cannot start from {folder_start} and run until {args.cyc_until}")
+            return
+        else:
+            logging.info(f"Run until cycle {args.cyc_until}. {args.cycle} cycles to run.")
     else:
         if args.cycle is None:
             parser.error("Either cycle or cyc_until must be given.")
