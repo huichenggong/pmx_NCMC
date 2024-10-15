@@ -588,6 +588,8 @@ def main():
         if args.cycle is not None:
             logging.info("Argument cycle will be ignored.")
         args.cycle = args.cyc_until - int(folder_start) - 1
+        if int(folder_start) == 0:
+            args.cycle += 1
         if args.cycle <= 0:
             logging.error(f"Cannot start from {folder_start} and run until {args.cyc_until}")
             return
