@@ -37,7 +37,7 @@ def main():
                                  "kcal/mol", "kCal/mol", "Kcal/mol", "KCal/mol"])
     parser.add_argument("-w",
                         metavar='plot',
-                        type=str, help='Work distribution plot. Default is "wplot.png"',
+                        type=str, help='Work distribution plot. Default is "Wplot.png"',
                         default="Wplot.png")
 
     args = parser.parse_args()
