@@ -269,6 +269,10 @@ class PMX_MDRUN_RE:
                         cmd_list_base[1] + f" -o {wdir / '1/eq.tpr'} -po {wdir/'1/mdout.mdp'} > {wdir / '1' / 'grompp_eq.log'} 2>&1"]
         for cmd in cmd_list:
             logging.debug(cmd)
+        for tpr in [wdir / '0/eq.tpr', wdir / '1/eq.tpr']:
+            if tpr.exists():
+                logging.debug(f"rm {tpr}")
+                tpr.unlink()
         processes = [subprocess.Popen(cmd, shell=True) for cmd in cmd_list]
         for p in processes:
             p.communicate()
@@ -291,6 +295,10 @@ class PMX_MDRUN_RE:
             wdir = self.current_folder
             cmd = f"{self.MDRUN} -s eq.tpr -multidir {wdir}/0 {wdir}/1 -deffnm eq > {wdir / 'mdrun_eq.log'} 2>&1"
         logging.debug(cmd)
+        for f in [wdir / "0" / "eq.gro", wdir / "1" / "eq.gro"]:
+            if f.exists():
+                logging.debug(f"rm {f}")
+                f.unlink()
         p = subprocess.Popen(cmd, shell=True, env=self.env)
         p.communicate()
         # make sure 2 eq.gro files are generated
@@ -338,6 +346,10 @@ class PMX_MDRUN_RE:
                         ]
         for cmd in cmd_list:
             logging.debug(cmd)
+        for tpr in [tpr0, tpr1]:
+            if tpr.exists():
+                logging.debug(f"rm {tpr}")
+                tpr.unlink()
         processes = [subprocess.Popen(cmd, shell=True) for cmd in cmd_list]
         for p in processes:
             p.communicate()
@@ -362,11 +374,11 @@ class PMX_MDRUN_RE:
             cmd += " > /dev/null 2>&1"
         else:
             cmd += f" > {wdir / 'mdrun_ti.log'} 2>&1"
+        logging.debug(cmd)
         for f in [tmp_folder / "0" / "ti.gro", tmp_folder / "1" / "ti.gro"]:
             if f.exists():
                 logging.debug(f"rm {f}")
                 f.unlink()
-        logging.debug(cmd)
         p = subprocess.Popen(cmd, shell=True, env=self.env)
         p.communicate()
         # make sure 2 ti.gro files are generated
@@ -396,7 +408,7 @@ class PMX_MDRUN_RE:
         for f in [self.tmp_folder/"0", self.tmp_folder/"1"]:
             for f2 in f.iterdir():
                 if f2.is_file():
-                    if f2.name not in ["ti.gro", "ti.cpt"]:
+                    if f2.name not in ["ti.gro", "ti.cpt", "eq.cpt", "eq.gro"]:
                         logging.debug(f"rm {f2}")
                         f2.unlink()
         
@@ -423,10 +435,14 @@ class PMX_MDRUN_RE:
         else:
             csv_line += "R\n"
             info_line += " Reject"
-            self.s0 = [self.current_folder / "0" / "eq.cpt", self.current_folder / "0" / "eq.gro"]
-            self.s1 = [self.current_folder / "1" / "eq.cpt", self.current_folder / "1" / "eq.gro"]
+            if self.min_output:
+                self.s0 = [self.tmp_folder / "0" / "eq.cpt", self.tmp_folder / "0" / "eq.gro"]
+                self.s1 = [self.tmp_folder / "1" / "eq.cpt", self.tmp_folder / "1" / "eq.gro"]
+            else:
+                self.s0 = [self.current_folder / "0" / "eq.cpt", self.current_folder / "0" / "eq.gro"]
+                self.s1 = [self.current_folder / "1" / "eq.cpt", self.current_folder / "1" / "eq.gro"]
         logging.info(info_line)
-        logging.debug(f"In the next cycle: 0 starts from {self.s0[0]} {self.s0[1]}, and 1 starts from {self.s1[0]} {self.s1[1]}")
+        logging.info(f"In the next cycle: 0 starts from {self.s0[0]} {self.s0[1]}, and 1 starts from {self.s1[0]} {self.s1[1]}")
 
         # with open(self.csv, 'a') as f:
         #     f.write(csv_line)
