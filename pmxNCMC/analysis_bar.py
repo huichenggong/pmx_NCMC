@@ -66,7 +66,7 @@ def main():
         else:
             temperature = args.t
             print(f"Temperature is given by argument -t : {args.t} K")
-    kBT_gmx = 8.314462618e-3 * temperature  # kJ/mol
+    kBT_gmx = pmxNCMC.util.kB_kj_mol * temperature  # kJ/mol
 
     # unit conversion
     if args.unit.lower() in ["kj", "kj/mol"]:
