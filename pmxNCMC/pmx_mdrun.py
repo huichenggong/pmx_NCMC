@@ -215,6 +215,8 @@ class PMX_MDRUN_RE:
             else:
                 logging.error(f"Cannot interpreter the last line of {self.csv} : {lines[-1]}")
                 return False
+            logging.info(
+                f"In this restart : 0 starts from {self.s0[0]} {self.s0[1]}, and 1 starts from {self.s1[0]} {self.s1[1]}")
             self.current_cycle += 1
             self.set_current_folder()
 
