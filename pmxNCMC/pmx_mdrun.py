@@ -420,7 +420,6 @@ class PMX_MDRUN_RE:
 
     def swap_check(self, w01, w10):
         """
-
         :param w01: Work 0->1 in kJ/mol
         :param w10: Work 1->0 in kJ/mol
         :return: swap_flag, csv_line
