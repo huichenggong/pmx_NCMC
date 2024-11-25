@@ -55,7 +55,7 @@ def logging_ave_time_cycle(ave_time_cycle, time_cycle):
 
 class PMX_MDRUN_RE:
     def __init__(self, top, csv, mdp_folder, folder_start, MDRUN, GROMPP, tmp_folder, env, min_output,
-                 debug=False):
+                 debug=False, exchange=True):
         """
         :param top: pathlib.Path, gromacs topology file
         :param csv: pathlib.Path, csv file to save work values
@@ -82,6 +82,7 @@ class PMX_MDRUN_RE:
         self.env           = env
         self.min_output    = min_output
         self.debug         = debug
+        self.exchange      = exchange
 
         self.safe_flag = False
         self.s0 = [None, None] # starting cpt/gro files for the next eq in lambda 0
@@ -428,7 +429,7 @@ class PMX_MDRUN_RE:
         csv_line = f"{self.current_cycle:5d},{w01:16.12},{w10:16.12},{min(1, p_accept):16.3f},"
         info_line = f"Cycle {self.current_cycle}, {w01:9.3f} kJ/mol, {w10:9.3f} kJ/mol, {min(1, p_accept):6.3f},"
         swap_flag = np.random.rand() < p_accept
-        if swap_flag:
+        if swap_flag and self.exchange:
             csv_line += "A\n"
             info_line += " Accept"
             self.s0 = [self.tmp_folder / "1" / "ti.cpt", self.tmp_folder / "1" / "ti.gro"]
@@ -551,6 +552,10 @@ def main():
                         help='Minimal IO. If you are sure about what you are doing and you want the minimal output '
                              'to save IO. This will run eq on tmp_folder and redirect all gromacs stdout/stderr to '
                              '/dev/null. Only eq.cpt, eq.gro, ti.cpt, ti.gro will be saved.')
+    parser.add_argument('--no_exchange',
+                        action='store_true',
+                        help='Do not exchange the configuration. This can be used to compare with plain PMX'
+                        )
 
     args = parser.parse_args()
     env = os.environ.copy()
@@ -628,7 +633,8 @@ def main():
                              tmp_folder=tmp_folder,
                              env=env,
                              min_output=args.min_output,
-                             debug=args.debug)
+                             debug=args.debug,
+                             exchange=not args.no_exchange)
         if not mdrun.safety_check():
             return
         mdrun.log_sim_settings()
