@@ -29,12 +29,11 @@ def main():
                         type=str, help='work output B->A. File to save all the work value (for pmx). The unis is kJ/mol. ')
     parser.add_argument("--unit",
                         metavar='unit',
-                        type=str, help='Unit for the print out and plotting. Default is "kJ/mol"',
-                        default="kJ",
-                        choices=["kJ", "kj", "KJ", "Kj",
-                                 "kJ/mol", "kj/mol", "KJ/mol", "Kj/mol",
-                                 "kcal", "kCal", "Kcal", "KCal",
-                                 "kcal/mol", "kCal/mol", "Kcal/mol", "KCal/mol"])
+                        type=lambda x: x.lower(),
+                        help='Unit for the print out and plotting. Default is "kJ/mol"',
+                        default="kj",
+                        choices=["kj", "kj/mol"
+                                 "kcal", "kcal/mol"])
     parser.add_argument("-w",
                         metavar='plot',
                         type=str, help='Work distribution plot. Default is "Wplot.png"',

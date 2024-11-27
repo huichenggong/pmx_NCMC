@@ -170,3 +170,4 @@ test/2-pentene/mdrun/01-trans/rep_999/eq/
 test/2-pentene/mdrun/01-trans/rep_999/mdout.mdp
 test/2-pentene/mdrun/01-trans/rep_999/md.csv
 
+/test/2-pentene/mdrun/test/02-append/md.csv
