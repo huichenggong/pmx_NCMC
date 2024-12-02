@@ -38,6 +38,13 @@ def main():
                         metavar='plot',
                         type=str, help='Work distribution plot. Default is "Wplot.png"',
                         default="Wplot.png")
+    parser.add_argument("-b",
+                        metavar="begin",
+                        type=int, help="The beginning of the data. Default is 0",
+                        default=0)
+    parser.add_argument("-e",
+                        metavar="end",
+                        type=int, help="The end of the data. Default is the end of the data")
 
     args = parser.parse_args()
 
@@ -84,6 +91,14 @@ def main():
     # BAR estimation
     work01 = df[df.columns[1]]  # 0->1, kJ/mol
     work10 = df[df.columns[2]]
+    if args.e:
+        work01 = work01[:args.e]
+        work10 = work10[:args.e]
+    if args.b:
+        work01 = work01[args.b:]
+        work10 = work10[args.b:]
+
+    print("Number of work in forward and backward directions: ", len(work01), len(work10))
     dG, dGe = pmxNCMC.util.free_E_bar(work01/kBT_gmx, work10/kBT_gmx)
     print(f"DeltaG = {dG * kBT:.2f} +- {dGe * kBT:.2f} {unit}")
 
@@ -94,7 +109,7 @@ def main():
         (work10 * -1).to_csv(args.oB, sep=' ', header=False)
 
     # plot
-    if args.w:
+    if args.w not in ["None", "none"]:
         pmxNCMC.util.plot_work_dist(work01, -1 * work10, kBT_in=kBT_gmx,
                                     fname=args.w, nbins=20, dG=dG, dGerr=dGe, units=unit, kBT=kBT)
 
