@@ -394,12 +394,12 @@ class PMX_MDRUN_RE:
         work01 = util.integrate_work(tmp_folder / "0" / "ti.xvg")
         work10 = -util.integrate_work(tmp_folder / "1" / "ti.xvg")
         swap_flag, csv_line = self.swap_check(work01, work10)
-        if swap_flag: # save ti.gro and ti.cpt
-            for i in range(2):
-                tmp_folder = self.tmp_folder / str(i)
-                rep_folder = self.current_folder / str(i)
-                for f in ["ti.gro", "ti.cpt"]:
-                    shutil.copy(tmp_folder / f, rep_folder / f)
+        for i in range(2):
+            tmp_folder = self.tmp_folder / str(i)
+            rep_folder = self.current_folder / str(i)
+            shutil.copy(tmp_folder / "ti.gro", rep_folder / "ti.gro")
+            if swap_flag: # always save ti.gro, but save ti.cpt only when necessary
+                shutil.copy(tmp_folder / "ti.cpt", rep_folder / "ti.cpt")
 
         if self.debug: # if debug model, save ti.xvg ti.tpr
             for i in range(2):
