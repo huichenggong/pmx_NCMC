@@ -36,8 +36,7 @@ def main():
                         type=lambda x: x.lower(),
                         help='Unit for the print out and plotting. Default is "kJ/mol"',
                         default="kj",
-                        choices=["kj", "kj/mol"
-                                 "kcal", "kcal/mol"])
+                        choices=["kj", "kj/mol", "kcal", "kcal/mol"])
     parser.add_argument("-w",
                         metavar='plot',
                         type=str, help='Work distribution plot. Default is "Wplot.png"',
