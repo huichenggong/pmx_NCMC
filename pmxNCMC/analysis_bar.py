@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-
-import pmxNCMC
+import logging
 import sys
 import argparse
+
 import numpy as np
 import pandas as pd
 
+import pmxNCMC
+
+logging.getLogger("pymbar").setLevel(logging.ERROR) # Suppress logging in pymbar
+import pymbar
 
 
 def main():
@@ -101,6 +105,11 @@ def main():
     print("Number of work in forward and backward directions: ", len(work01), len(work10))
     dG, dGe = pmxNCMC.util.free_E_bar(work01/kBT_gmx, work10/kBT_gmx)
     print(f"DeltaG = {dG * kBT:.2f} +- {dGe * kBT:.2f} {unit}")
+    try:
+        overlap = pymbar.bar_overlap(work01 / kBT, work10 / kBT)
+        print(f"Overlap BAR: {overlap:.2f}")
+    except AssertionError:
+        print(f"Overlap BAR: 0 (pymbar failed to calculate the overlap)")
 
     # save work for pmx
     if args.oA:
