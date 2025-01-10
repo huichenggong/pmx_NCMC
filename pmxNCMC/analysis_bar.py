@@ -101,7 +101,8 @@ def main():
         work01 = work01[args.b:]
         work10 = work10[args.b:]
 
-    print("Number of work in forward and backward directions: ", len(work01), len(work10))
+    print( "Number of work in 0->1 , 1->0         : ", len(work01), len(work10))
+    print(f"Number of Accepted/Attempted exchange : {sum(df[df.columns[-1]])} / {len(df)}")
     dG, dGe = pmxNCMC.util.free_E_bar(work01/kBT_gmx, work10/kBT_gmx)
     print(f"DeltaG = {dG * kBT:.2f} +- {dGe * kBT:.2f} {unit}")
     try:
