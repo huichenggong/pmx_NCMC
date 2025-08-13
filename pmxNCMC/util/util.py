@@ -1,6 +1,7 @@
 import os
 import shutil
 import logging
+import math
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -75,9 +76,9 @@ def mdp_check_TI(mdp_file, init_lam):
         logging.info(f"{init_lambda} {delta_lambda} {nsteps}")
         logging.info(f"Cannot find init-lambda, delta-lambda, or nsteps in {mdp_file}")
         return False
-    if init_lam==1 and init_lambda == 1 and delta_lambda * nsteps == -1:
+    if init_lam==1 and init_lambda == 1 and math.isclose(delta_lambda * nsteps, -1):
         return True
-    if init_lam==0 and init_lambda == 0 and delta_lambda * nsteps == 1:
+    if init_lam==0 and init_lambda == 0 and math.isclose(delta_lambda * nsteps, 1):
         return True
     logging.info(f"MDP file {mdp_file} does not have the correct init-lambda, delta-lambda, nsteps")
     logging.info(f"init-lambda={init_lambda}, delta-lambda * nsteps = {delta_lambda * nsteps}")
